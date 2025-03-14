@@ -1,0 +1,19 @@
+## Interface: 11200
+## Title: vPeddler
+## Notes: Peddler for Vanilla WoW
+## Author: idfk
+## Version: 0.5
+## SavedVariables: vPeddlerDB
+
+vPeddler.lua
+# WantedItems.lua
+vPeddlerOptions.lua
+vPeddlerGUI.xml
+
+# Texture Files/Icons
+textures\Peddler_16.tga
+textures\Peddler_32.tga
+textures\Peddler_64.tga
+textures\Peddler_outline_16.tga
+textures\Peddler_outline_32.tga
+textures\Peddler_outline_64.tga
