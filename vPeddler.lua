@@ -18,6 +18,9 @@ function vPeddler_InitDefaults()
             autoRepair = true,
             flaggedItems = {}, -- Items manually flagged for selling
             
+            -- Add verbose mode setting (enabled by default)
+            verboseMode = true,
+            
             -- Icon settings (with your preferred defaults)
             iconSize = 16,
             iconAlpha = 1.0,
@@ -70,6 +73,7 @@ function vPeddler_InitDefaults()
         if vPeddlerDB.autoFlagGrey == nil then vPeddlerDB.autoFlagGrey = true end
         if vPeddlerDB.manualSellButton == nil then vPeddlerDB.manualSellButton = false end
         if vPeddlerDB.debug == nil then vPeddlerDB.debug = false end
+        if vPeddlerDB.verboseMode == nil then vPeddlerDB.verboseMode = true end
     end
 end
 
@@ -206,7 +210,9 @@ function vPeddler_SellJunk()
     
     -- Start the selling process if there are items to sell
     if vPeddler.queueSize > 0 then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Selling " .. itemCount .. " items...")
+        if vPeddlerDB.verboseMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Selling " .. itemCount .. " items...")
+        end
         vPeddler_ProcessSellQueue()
     end
 end
@@ -305,10 +311,18 @@ function vPeddler_HookContainerFrames()
                     -- Toggle flagged status
                     if vPeddlerDB.flaggedItems[itemId] then
                         vPeddlerDB.flaggedItems[itemId] = nil
-                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed "..name.." from auto-sell list")
+                        
+                        -- Only show message if verbose mode is enabled
+                        if vPeddlerDB.verboseMode then
+                            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed "..link.." from auto-sell list")
+                        end
                     else
                         vPeddlerDB.flaggedItems[itemId] = true
-                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added "..name.." to auto-sell list")
+                        
+                        -- Only show message if verbose mode is enabled
+                        if vPeddlerDB.verboseMode then
+                            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added "..link.." to auto-sell list")
+                        end
                     end
                     
                     -- Update all instances of this item across all bags
@@ -593,13 +607,9 @@ function vPeddler_ProcessSellQueue()
         local earned = GetMoney() - vPeddler.startMoney
         
         -- Only report if we actually sold something
-        if earned > 0 then
+        if earned > 0 and vPeddlerDB.verboseMode then
             DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Sold items for " .. 
                 vPeddler_GetCoinTextureString(earned))
-                
-            -- Force a full cache rebuild
-            vPeddler.needsUpdate = true
-            vPeddler_UpdateBagSlotMarkers()
         end
         return
     end

@@ -4,7 +4,7 @@
     <!-- Main Options Frame -->
     <Frame name="vPeddlerOptionsFrame" toplevel="true" movable="true" enableMouse="true" parent="UIParent" hidden="true">
         <Size>
-            <AbsDimension x="340" y="450"/>
+            <AbsDimension x="350" y="440"/>
         </Size>
         <Anchors>
             <Anchor point="CENTER"/>
@@ -125,16 +125,28 @@
                     </OnClick>
                 </Scripts>
             </CheckButton>
+
+            <!-- Verbose Mode Checkbox -->
+            <CheckButton name="vPeddlerVerboseModeCheckbox" inherits="OptionsCheckButtonTemplate">
+                <Anchors>
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerManualSellButtonCheckbox" relativePoint="BOTTOMLEFT" />
+                </Anchors>
+                <Scripts>
+                    <OnClick>
+                        vPeddlerOptions_VerboseModeToggle();
+                    </OnClick>
+                </Scripts>
+            </CheckButton>
             
             <!-- Icon Size Slider -->
-            <Slider name="vPeddlerIconSizeSlider" inherits="OptionsSliderTemplate" minValue="1" maxValue="3" valueStep="1">
+            <Slider name="vPeddlerIconSizeSlider" inherits="OptionsSliderTemplate" minValue="12" maxValue="64" valueStep="1">
                 <Size>
                     <AbsDimension x="200" y="16"/>
                 </Size>
                 <Anchors>
-                    <Anchor point="TOPLEFT" relativeTo="vPeddlerManualSellButtonCheckbox" relativePoint="TOPLEFT">
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerVerboseModeCheckbox" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="0" y="-50"/>
+                            <AbsDimension x="0" y="-20"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -172,9 +184,9 @@
                     <AbsDimension x="200" y="16"/>
                 </Size>
                 <Anchors>
-                    <Anchor point="TOPLEFT" relativeTo="vPeddlerIconSizeSlider" relativePoint="TOPLEFT">
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerIconSizeSlider" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="0" y="-45"/>
+                            <AbsDimension x="0" y="-22"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -196,9 +208,10 @@
                     <AbsDimension x="100" y="100"/>
                 </Size>
                 <Anchors>
+                    <!-- Position on the right side of the panel, next to the checkboxes -->
                     <Anchor point="TOPRIGHT" relativeTo="$parent" relativePoint="TOPRIGHT">
                         <Offset>
-                            <AbsDimension x="-20" y="-40"/>
+                            <AbsDimension x="-25" y="-70"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -318,7 +331,7 @@
                 <Anchors>
                     <Anchor point="TOPLEFT" relativeTo="vPeddlerIconAlphaSlider" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="-15" y="-25"/>
+                            <AbsDimension x="0" y="-25"/>
                         </Offset>
                     </Anchor>
                 </Anchors>

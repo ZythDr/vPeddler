@@ -117,10 +117,10 @@ function vPeddlerOptions_OnLoad()
     
     -- Set checkbox labels
     getglobal(vPeddlerEnabledCheckbox:GetName().."Text"):SetText("Enable vPeddler");
-    getglobal(vPeddlerAutoRepairCheckbox:GetName().."Text"):SetText("Auto Repair at Vendors");
-    getglobal(vPeddlerAutoSellCheckbox:GetName().."Text"):SetText("Auto Sell Junk at Vendors");
-    getglobal(vPeddlerManualSellButtonCheckbox:GetName().."Text"):SetText("Show Manual Sell Button Instead");
-    
+    getglobal(vPeddlerAutoRepairCheckbox:GetName().."Text"):SetText("Auto Repair");
+    getglobal(vPeddlerAutoSellCheckbox:GetName().."Text"):SetText("Auto Sell Junk");
+    getglobal(vPeddlerManualSellButtonCheckbox:GetName().."Text"):SetText("Use Manual Sell Button Instead");
+    getglobal(vPeddlerVerboseModeCheckbox:GetName().."Text"):SetText("Verbose Mode");    
     -- Add this line
     getglobal(vPeddlerIconOutlineCheckbox:GetName().."Text"):SetText("Outline");
 
@@ -147,49 +147,21 @@ function vPeddlerOptions_OnShow()
         tempSettings.ignoreQuality[k] = v;
     end
     
-    -- Update UI elements to match current settings
-    vPeddlerEnabledCheckbox:SetChecked(vPeddlerDB.enabled);
-    vPeddlerAutoRepairCheckbox:SetChecked(vPeddlerDB.autoRepair);
-    vPeddlerAutoSellCheckbox:SetChecked(vPeddlerDB.autoSell);
-    vPeddlerAutoFlagGraysCheckbox:SetChecked(vPeddlerDB.autoFlagGrays or false);
-    vPeddlerManualSellButtonCheckbox:SetChecked(vPeddlerDB.manualSellButton or false);
-    
-    -- Set slider values
-    vPeddlerIconSizeSlider:SetValue(vPeddlerDB.iconSize or 16);
-    vPeddlerIconAlphaSlider:SetValue(vPeddlerDB.iconAlpha or 0.8);
-    
-    -- Highlight the current position button
-    vPeddlerOptions_UpdatePositionButtons(vPeddlerDB.iconPosition or "TOPRIGHT");
-    
-    -- Update dropdown menus
-    UIDropDownMenu_SetSelectedValue(vPeddlerModifierKeyDropdown, vPeddlerDB.modifierKey or "ALT");
-    UIDropDownMenu_SetText(vPeddlerDB.modifierKey or "Alt Key", vPeddlerModifierKeyDropdown);
-    
-    UIDropDownMenu_SetSelectedValue(vPeddlerIconTextureDropdown, vPeddlerDB.iconTexture or "coins");
-    UIDropDownMenu_SetText(vPeddlerDB.iconTextureDisplayName or "Gold Coin", vPeddlerIconTextureDropdown);
-    
-    -- Update the preview texture
-    vPeddlerOptions_UpdatePreview();
-    
-    -- Make sure auto-sell and manual button are mutually exclusive
-    if vPeddlerDB.autoSell and vPeddlerDB.manualSellButton then
-        -- If both are somehow true, prioritize auto-sell
-        vPeddlerDB.manualSellButton = false
-    end
-    
+    -- Update checkboxes based on current settings
+    vPeddlerEnabledCheckbox:SetChecked(vPeddlerDB.enabled)
+    vPeddlerAutoRepairCheckbox:SetChecked(vPeddlerDB.autoRepair)
     vPeddlerAutoSellCheckbox:SetChecked(vPeddlerDB.autoSell)
     vPeddlerManualSellButtonCheckbox:SetChecked(vPeddlerDB.manualSellButton)
     
-    -- Convert icon size values to slider positions (1-3)
-    local sizeValue = 1; -- Default to small (16x16)
-    if vPeddlerDB.iconSize == 32 then 
-        sizeValue = 2; -- Medium (32x32)
-    elseif vPeddlerDB.iconSize == 64 then
-        sizeValue = 3; -- Large (64x64)
-    end
+    -- Set the slider directly to the actual pixel size value (not a 1-3 range)
+    vPeddlerIconSizeSlider:SetValue(vPeddlerDB.iconSize);
     
-    vPeddlerIconSizeSlider:SetValue(sizeValue);
+    -- Update other UI elements
     vPeddlerIconOutlineCheckbox:SetChecked(vPeddlerDB.iconOutline);
+    vPeddlerVerboseModeCheckbox:SetChecked(vPeddlerDB.verboseMode);
+    
+    -- Update the preview to match current settings
+    vPeddlerOptions_UpdatePreview();
 end
 
 -- Updates the preview icon
@@ -276,10 +248,17 @@ end
 
 -- Slider handlers
 function vPeddlerOptions_IconSizeChanged()
-    local pixelSize = vPeddlerIconSizeSlider:GetValue();
-    vPeddlerDB.iconSize = pixelSize;
-    vPeddlerOptions_UpdatePreview();
-    vPeddler_UpdateBagSlotMarkers();
+    -- Get the exact pixel value from the slider
+    local newSize = vPeddlerIconSizeSlider:GetValue();
+    
+    -- Only update if the size has actually changed
+    if newSize ~= vPeddlerDB.iconSize then
+        vPeddlerDB.iconSize = newSize;
+        vPeddlerOptions_UpdatePreview();
+        
+        -- Update all visible bag markers
+        vPeddler_RefreshAllMarkers();
+    end
 end
 
 function vPeddlerOptions_IconAlphaChanged()
@@ -594,4 +573,9 @@ function vPeddlerOptions_OutlineToggle()
     vPeddlerDB.iconOutline = vPeddlerIconOutlineCheckbox:GetChecked();
     vPeddlerOptions_UpdatePreview();
     vPeddler_UpdateBagSlotMarkers();
+end
+
+-- Add this handler for when the checkbox is clicked:
+function vPeddlerOptions_VerboseModeToggle()
+    vPeddlerDB.verboseMode = vPeddlerVerboseModeCheckbox:GetChecked();
 end
