@@ -211,7 +211,7 @@
                     <!-- Position on the right side of the panel, next to the checkboxes -->
                     <Anchor point="TOPRIGHT" relativeTo="$parent" relativePoint="TOPRIGHT">
                         <Offset>
-                            <AbsDimension x="-25" y="-70"/>
+                            <AbsDimension x="-18" y="-55"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -237,7 +237,7 @@
                         <Anchors>
                             <Anchor point="TOPLEFT" relativeTo="$parent" relativePoint="TOPLEFT">
                                 <Offset>
-                                    <AbsDimension x="5" y="-5"/>
+                                    <AbsDimension x="8" y="-8"/>
                                 </Offset>
                             </Anchor>
                         </Anchors>
@@ -256,7 +256,7 @@
                         <Anchors>
                             <Anchor point="TOPRIGHT" relativeTo="$parent" relativePoint="TOPRIGHT">
                                 <Offset>
-                                    <AbsDimension x="-5" y="-5"/>
+                                    <AbsDimension x="-8" y="-8"/>
                                 </Offset>
                             </Anchor>
                         </Anchors>
@@ -294,7 +294,7 @@
                         <Anchors>
                             <Anchor point="BOTTOMLEFT" relativeTo="$parent" relativePoint="BOTTOMLEFT">
                                 <Offset>
-                                    <AbsDimension x="5" y="5"/>
+                                    <AbsDimension x="8" y="8"/>
                                 </Offset>
                             </Anchor>
                         </Anchors>
@@ -313,7 +313,7 @@
                         <Anchors>
                             <Anchor point="BOTTOMRIGHT" relativeTo="$parent" relativePoint="BOTTOMRIGHT">
                                 <Offset>
-                                    <AbsDimension x="-5" y="5"/>
+                                    <AbsDimension x="-8" y="8"/>
                                 </Offset>
                             </Anchor>
                         </Anchors>
@@ -331,7 +331,7 @@
                 <Anchors>
                     <Anchor point="TOPLEFT" relativeTo="vPeddlerIconAlphaSlider" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="0" y="-25"/>
+                            <AbsDimension x="-15" y="-27"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -339,7 +339,6 @@
                     <OnLoad>
                         UIDropDownMenu_SetWidth(120);
                         UIDropDownMenu_Initialize(this, vPeddlerOptions_ModifierKeyDropdown_Initialize);
-                        UIDropDownMenu_SetText("Alt Key", vPeddlerModifierKeyDropdown);
                     </OnLoad>
                 </Scripts>
             </Frame>
@@ -371,7 +370,7 @@
                 <Anchors>
                     <Anchor point="TOPLEFT" relativeTo="vPeddlerModifierKeyDropdown" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="0" y="-25"/>
+                            <AbsDimension x="0" y="-23"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -379,7 +378,6 @@
                     <OnLoad>
                         UIDropDownMenu_SetWidth(120);
                         UIDropDownMenu_Initialize(this, vPeddlerOptions_IconTextureDropdown_Initialize);
-                        UIDropDownMenu_SetText("Gold Coin", vPeddlerIconTextureDropdown);
                     </OnLoad>
                 </Scripts>
             </Frame>
@@ -431,16 +429,70 @@
                     </Layer>
                 </Layers>
             </Frame>
-            
-            <!-- Close Button -->
-            <Button name="vPeddlerOptionsCloseButton" inherits="UIPanelButtonTemplate" text="Close">
+
+            <!-- Reset Filters Button -->
+            <Button name="vPeddlerResetFiltersButton" inherits="UIPanelButtonTemplate" text="Reset Filters">
                 <Size>
-                    <AbsDimension x="80" y="22"/>
+                    <AbsDimension x="100" y="22"/>
                 </Size>
                 <Anchors>
-                    <Anchor point="BOTTOMRIGHT" relativeTo="$parent" relativePoint="BOTTOMRIGHT">
+                    <Anchor point="BOTTOMLEFT" relativeTo="vPeddlerOptionsFrame" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="-20" y="15"/>
+                            <AbsDimension x="20" y="16"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnClick>
+                        vPeddlerOptions_ResetFilters();
+                    </OnClick>
+                    <OnEnter>
+                        GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                        GameTooltip:SetText("Clear all manually flagged items from your auto-sell list");
+                        GameTooltip:Show();
+                    </OnEnter>
+                    <OnLeave>
+                        GameTooltip:Hide();
+                    </OnLeave>
+                </Scripts>
+            </Button>
+
+            <!-- Reset All Button -->
+            <Button name="vPeddlerResetAllButton" inherits="UIPanelButtonTemplate" text="Reset All">
+                <Size>
+                    <AbsDimension x="100" y="22"/>
+                </Size>
+                <Anchors>
+                    <Anchor point="LEFT" relativeTo="vPeddlerResetFiltersButton" relativePoint="RIGHT">
+                        <Offset>
+                            <AbsDimension x="5" y="0"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnClick>
+                        vPeddlerOptions_ResetDefaults();
+                    </OnClick>
+                    <OnEnter>
+                        GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                        GameTooltip:SetText("Reset all addon settings to defaults (keeps your auto-sell list)");
+                        GameTooltip:Show();
+                    </OnEnter>
+                    <OnLeave>
+                        GameTooltip:Hide();
+                    </OnLeave>
+                </Scripts>
+            </Button>
+
+            <!-- Close Button -->
+            <Button name="vPeddlerCloseButton" inherits="UIPanelButtonTemplate" text="Close">
+                <Size>
+                    <AbsDimension x="100" y="22"/>
+                </Size>
+                <Anchors>
+                    <Anchor point="LEFT" relativeTo="vPeddlerResetAllButton" relativePoint="RIGHT">
+                        <Offset>
+                            <AbsDimension x="5" y="0"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -450,25 +502,28 @@
                     </OnClick>
                 </Scripts>
             </Button>
-            
-            <!-- Reset Button -->
-            <Button name="vPeddlerOptionsResetButton" inherits="UIPanelButtonTemplate" text="Defaults">
+
+            <!-- Add this as a new frame inside your main frame -->
+            <Frame name="$parentDragHeader">
                 <Size>
-                    <AbsDimension x="80" y="22"/>
+                    <AbsDimension x="300" y="40"/>
                 </Size>
                 <Anchors>
-                    <Anchor point="RIGHT" relativeTo="vPeddlerOptionsCloseButton" relativePoint="LEFT">
+                    <Anchor point="TOP">
                         <Offset>
-                            <AbsDimension x="-5" y="0"/>
+                            <AbsDimension x="0" y="5"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
                 <Scripts>
-                    <OnClick>
-                        vPeddlerOptions_ResetDefaults();
-                    </OnClick>
+                    <OnMouseDown>
+                        vPeddlerOptionsFrame:StartMoving()
+                    </OnMouseDown>
+                    <OnMouseUp>
+                        vPeddlerOptionsFrame:StopMovingOrSizing()
+                    </OnMouseUp>
                 </Scripts>
-            </Button>
+            </Frame>
         </Frames>
         <Scripts>
             <OnLoad>

@@ -1,14 +1,17 @@
 ## Interface: 11200
 ## Title: vPeddler
 ## Notes: Peddler for Vanilla WoW
-## Author: idfk
-## Version: 0.5
+## Author: Peachoo @ Nordanaar - Turtle WoW
+## Version: 1.0
 ## SavedVariables: vPeddlerDB
 
 vPeddler.lua
 # WantedItems.lua
 vPeddlerOptions.lua
 vPeddlerGUI.xml
+
+# Addon Compatibility Modules
+compat\Bagshui.lua
 
 # Texture Files/Icons
 textures\Peddler_16.tga

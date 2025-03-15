@@ -117,9 +117,9 @@ function vPeddlerOptions_OnLoad()
     
     -- Set checkbox labels
     getglobal(vPeddlerEnabledCheckbox:GetName().."Text"):SetText("Enable vPeddler");
-    getglobal(vPeddlerAutoRepairCheckbox:GetName().."Text"):SetText("Auto Repair");
+    getglobal(vPeddlerAutoRepairCheckbox:GetName().."Text"):SetText("Auto Repair (WIP)");
     getglobal(vPeddlerAutoSellCheckbox:GetName().."Text"):SetText("Auto Sell Junk");
-    getglobal(vPeddlerManualSellButtonCheckbox:GetName().."Text"):SetText("Use Manual Sell Button Instead");
+    getglobal(vPeddlerManualSellButtonCheckbox:GetName().."Text"):SetText("Use Manual Sell Button (WIP)");
     getglobal(vPeddlerVerboseModeCheckbox:GetName().."Text"):SetText("Verbose Mode");    
     -- Add this line
     getglobal(vPeddlerIconOutlineCheckbox:GetName().."Text"):SetText("Outline");
@@ -127,8 +127,14 @@ function vPeddlerOptions_OnLoad()
     -- Update the slider min, max and step values for more granular control
     getglobal(vPeddlerIconSizeSlider:GetName().."Low"):SetText("Small");
     getglobal(vPeddlerIconSizeSlider:GetName().."High"):SetText("Large");
-    vPeddlerIconSizeSlider:SetMinMaxValues(12, 64);
+    vPeddlerIconSizeSlider:SetMinMaxValues(10, 40);
     vPeddlerIconSizeSlider:SetValueStep(1);
+
+    -- Make the frame movable
+    vPeddlerOptionsFrame:SetMovable(true)
+    vPeddlerOptionsFrame:EnableMouse(true)
+    vPeddlerOptionsFrame:RegisterForDrag("LeftButton")
+    vPeddlerOptionsFrame:SetClampedToScreen(true)
 end
 
 -- Called when the options frame is shown
@@ -152,13 +158,36 @@ function vPeddlerOptions_OnShow()
     vPeddlerAutoRepairCheckbox:SetChecked(vPeddlerDB.autoRepair)
     vPeddlerAutoSellCheckbox:SetChecked(vPeddlerDB.autoSell)
     vPeddlerManualSellButtonCheckbox:SetChecked(vPeddlerDB.manualSellButton)
+    vPeddlerVerboseModeCheckbox:SetChecked(vPeddlerDB.verboseMode)
     
-    -- Set the slider directly to the actual pixel size value (not a 1-3 range)
+    -- Set the slider directly to the actual pixel size value
     vPeddlerIconSizeSlider:SetValue(vPeddlerDB.iconSize);
+    vPeddlerIconAlphaSlider:SetValue(vPeddlerDB.iconAlpha);
     
     -- Update other UI elements
     vPeddlerIconOutlineCheckbox:SetChecked(vPeddlerDB.iconOutline);
-    vPeddlerVerboseModeCheckbox:SetChecked(vPeddlerDB.verboseMode);
+    
+    -- Fix dropdown menus to show current values
+    -- Modifier Key dropdown
+    if vPeddlerDB.modifierKey == "ALT" then
+        UIDropDownMenu_SetSelectedValue(vPeddlerModifierKeyDropdown, "ALT");
+        UIDropDownMenu_SetText("Alt Key", vPeddlerModifierKeyDropdown);
+    elseif vPeddlerDB.modifierKey == "CTRL" then
+        UIDropDownMenu_SetSelectedValue(vPeddlerModifierKeyDropdown, "CTRL");
+        UIDropDownMenu_SetText("Control Key", vPeddlerModifierKeyDropdown);
+    elseif vPeddlerDB.modifierKey == "SHIFT" then
+        UIDropDownMenu_SetSelectedValue(vPeddlerModifierKeyDropdown, "SHIFT");
+        UIDropDownMenu_SetText("Shift Key", vPeddlerModifierKeyDropdown);
+    end
+    
+    -- Icon Texture dropdown
+    if vPeddlerDB.iconTexture == "coins" then
+        UIDropDownMenu_SetSelectedValue(vPeddlerIconTextureDropdown, "coins");
+        UIDropDownMenu_SetText("Peddler Coins", vPeddlerIconTextureDropdown);
+    elseif vPeddlerDB.iconTexture == "goldcoin" then
+        UIDropDownMenu_SetSelectedValue(vPeddlerIconTextureDropdown, "goldcoin");
+        UIDropDownMenu_SetText("Gold Coins", vPeddlerIconTextureDropdown);
+    end
     
     -- Update the preview to match current settings
     vPeddlerOptions_UpdatePreview();
@@ -367,7 +396,8 @@ function vPeddlerOptions_IconTextureDropdown_Initialize()
     UIDropDownMenu_AddButton(info);
 end
 
--- Reset to defaults
+-- Update the vPeddlerOptions_ResetDefaults function:
+
 function vPeddlerOptions_ResetDefaults()
     -- Ask for confirmation
     StaticPopupDialogs["VPEDDLER_RESET"] = {
@@ -375,9 +405,23 @@ function vPeddlerOptions_ResetDefaults()
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
+            -- Store flaggedItems before reset
+            local oldFlagged = vPeddlerDB.flaggedItems or {}
+            
+            -- Reset settings
             vPeddler_InitDefaults(true); -- true means force reset
-            vPeddlerOptions_OnShow(); -- Refresh the UI
-            vPeddler_UpdateBagSlotMarkers(); -- Update all bag markers
+            
+            -- Restore flagged items
+            vPeddlerDB.flaggedItems = oldFlagged
+            
+            -- Refresh the UI
+            vPeddlerOptions_OnShow();
+            
+            -- Force rebuild item cache and update all markers
+            vPeddler.needsUpdate = true
+            vPeddler_BuildItemCache()
+            vPeddler_UpdateBagSlotMarkers();
+            
             DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Settings reset to defaults");
         end,
         timeout = 0,
@@ -386,6 +430,33 @@ function vPeddlerOptions_ResetDefaults()
     };
     
     StaticPopup_Show("VPEDDLER_RESET");
+end
+
+-- Add this new function to reset flagged items:
+
+function vPeddlerOptions_ResetFilters()
+    -- Ask for confirmation
+    StaticPopupDialogs["VPEDDLER_RESET_FILTERS"] = {
+        text = "Reset all manually flagged items?\n\nThis will clear your auto-sell list but keep your other settings.",
+        button1 = "Yes",
+        button2 = "No",
+        OnAccept = function()
+            -- Clear flagged items table
+            vPeddlerDB.flaggedItems = {}
+            
+            -- Force rebuild item cache and update all markers
+            vPeddler.needsUpdate = true
+            vPeddler_BuildItemCache()
+            vPeddler_UpdateBagSlotMarkers()
+            
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-sell list has been cleared")
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+    }
+    
+    StaticPopup_Show("VPEDDLER_RESET_FILTERS")
 end
 
 -- Slash command handler
@@ -419,6 +490,7 @@ function vPeddler_InitDefaults(force)
         vPeddlerDB.autoSell = true
         vPeddlerDB.autoFlagGrays = true
         vPeddlerDB.manualSellButton = false
+        vPeddlerDB.verboseMode = true 
     else
         -- Only set if not already set
         vPeddlerDB.enabled = vPeddlerDB.enabled or true
@@ -426,6 +498,7 @@ function vPeddler_InitDefaults(force)
         vPeddlerDB.autoSell = vPeddlerDB.autoSell or true
         vPeddlerDB.autoFlagGrays = vPeddlerDB.autoFlagGrays or true
         vPeddlerDB.manualSellButton = vPeddlerDB.manualSellButton or false
+        vPeddlerDB.verboseMode = vPeddlerDB.verboseMode or true
     end
     
     -- Icon settings - always force these values when resetting
@@ -552,6 +625,8 @@ SlashCmdList["VPEDDLER"] = function(msg)
         vPeddler_ToggleOptionsPanel()
     elseif msg == "reset" then
         vPeddlerOptions_ResetDefaults()
+    elseif msg == "clearfilters" or msg == "resetfilters" then
+        vPeddlerOptions_ResetFilters()
     elseif msg == "repair" then
         vPeddler_AutoRepair()
     elseif msg == "sell" then
@@ -562,6 +637,7 @@ SlashCmdList["VPEDDLER"] = function(msg)
         DEFAULT_CHAT_FRAME:AddMessage("  /vp sell - Manually sell junk items")
         DEFAULT_CHAT_FRAME:AddMessage("  /vp repair - Manually repair items")
         DEFAULT_CHAT_FRAME:AddMessage("  /vp reset - Reset all settings to defaults")
+        DEFAULT_CHAT_FRAME:AddMessage("  /vp resetfilters - Clear all manually flagged items")
         DEFAULT_CHAT_FRAME:AddMessage("  /vp help - Show this help text")
     else
         vPeddler_ToggleOptionsPanel()

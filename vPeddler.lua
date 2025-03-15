@@ -9,26 +9,26 @@ vPeddler.itemCache = {}  -- Cache to track item status
 
 -- Basic initialization
 -- Consolidated initialization function
-function vPeddler_InitDefaults()
+function vPeddler_InitDefaults(force)
     -- Create vPeddlerDB if it doesn't exist
     if not vPeddlerDB then
         vPeddlerDB = {
             enabled = true,
             autoSell = true,
             autoRepair = true,
-            flaggedItems = {}, -- Items manually flagged for selling
-            
-            -- Add verbose mode setting (enabled by default)
+            flaggedItems = {},
             verboseMode = true,
-            
-            -- Icon settings (with your preferred defaults)
             iconSize = 16,
             iconAlpha = 1.0,
             iconPosition = "BOTTOMLEFT",
             iconTexture = "coins",
             modifierKey = "ALT",
             iconOutline = false,
-            
+            minProfit = 0,
+            autoFlagGrey = true,
+            manualSellButton = false,
+            debug = false,
+
             -- Quality settings
             ignoreQuality = {
                 [0] = true,  -- Poor (Grey)
@@ -37,13 +37,7 @@ function vPeddler_InitDefaults()
                 [3] = false, -- Rare (Blue)
                 [4] = false, -- Epic (Purple)
                 [5] = false, -- Legendary (Orange)
-            },
-            
-            -- Additional settings
-            minProfit = 0,
-            autoFlagGrey = true,
-            manualSellButton = false,
-            debug = false
+            }
         }
     else
         -- Ensure all critical settings exist even for existing profiles
