@@ -29,13 +29,14 @@ A relatively light-weight and sophisticated junk seller addon that focuses on Qa
 >  - ~~Option for manual sell button instead of automatic selling~~  
 > WIP
 
-### Addon Compatibility
-- [x] Compatible with default bags
-- [x] Compatible with Bagshui
-- [x] Compatible with Bagnon (WIP)
-- [x] Compatible with EngBags (WIP)
-- [x] Compatible with pfUI bags (WIP)
-- [x] Compatible with SUCC-bag (WIP)
+### Addon Compatibility  
+- [x] Compatible with default bags  
+- [x] Compatible with Bagshui  
+- [x] Compatible with Bagnon  
+- [x] Compatible with EngBags  
+- [x] Compatible with pfUI bags  
+- [] Compatible with SUCC-bag  
+- [] Compatible with Dragonflight UI
 
 ## Usage
 
