@@ -12,6 +12,11 @@ vPeddlerGUI.xml
 
 # Addon Compatibility Modules
 compat\Bagshui.lua
+compat\pfUI.lua
+compat\Bagnon.lua
+compat\EngBags.lua
+compat\SUCC-Bag.lua
+compat\DragonflightUI.lua
 
 # Texture Files/Icons
 textures\Peddler_16.tga

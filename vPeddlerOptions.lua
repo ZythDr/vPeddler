@@ -60,6 +60,19 @@ function vPeddler_CreateOptionsPanel()
     autoRepairCheck:SetScript("OnClick", function()
         vPeddlerDB.autoRepair = this:GetChecked()
     end)
+
+    -- Auto-flag gray items checkbox
+    local autoFlagGrayCheckbox = CreateFrame("CheckButton", "vPeddlerAutoFlagGrayCheckbox", vPeddlerOptionsFrame, "UICheckButtonTemplate")
+    autoFlagGrayCheckbox:SetPoint("TOPLEFT", verboseModeCheckbox, "BOTTOMLEFT", 0, -10)
+    autoFlagGrayCheckbox:SetChecked(vPeddlerDB.autoFlagGray)
+    getglobal(autoFlagGrayCheckbox:GetName() .. "Text"):SetText("Automatically flag gray items for selling")
+    autoFlagGrayCheckbox:SetScript("OnClick", function()
+        vPeddlerDB.autoFlagGray = this:GetChecked()
+        if vPeddlerDB.verboseMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flag gray items " .. (vPeddlerDB.autoFlagGray and "enabled" or "disabled"))
+        end
+        vPeddler.OnOptionSet("autoFlagGray", vPeddlerDB.autoFlagGray)
+    end)
     
     -- Label for quality filters
     local qualityLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
