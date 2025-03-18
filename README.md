@@ -35,8 +35,8 @@ A relatively light-weight and sophisticated junk seller addon that focuses on Qa
 - [x] Compatible with Bagnon  
 - [x] Compatible with EngBags  
 - [x] Compatible with pfUI bags  
-- [] Compatible with SUCC-bag  
-- [] Compatible with Dragonflight UI
+- [ ] Compatible with SUCC-bag  
+- [ ] Compatible with Dragonflight UI
 
 ## Usage
 
