@@ -29,7 +29,7 @@ add/remove any item in your inventory to your auto-sell list
 
 - **Icon Customization:**
   - Size (10-40 pixels)
-  - Position (5 options: Top-Left, Top-Right, Center, Bottom-Left, Bottom-Right)
+  - Position (TopLeft, TopRight, Center, BottomLeft, BottomRight)
   - Transparency/Alpha level
   - Icon style (native Gold Coins icon or custom Peddler icon)
   - Optional outlined icons (only for Peddler icon) for better visibility
