@@ -28,6 +28,7 @@ function vPeddler_InitDefaults(force)
             autoFlagGrey = true,
             manualSellButton = false,
             debug = false,
+            autoFlagGray = true,
 
             -- Quality settings
             ignoreQuality = {
@@ -51,7 +52,7 @@ function vPeddler_InitDefaults(force)
         if vPeddlerDB.modifierKey == nil then vPeddlerDB.modifierKey = "ALT" end
         if vPeddlerDB.iconOutline == nil then vPeddlerDB.iconOutline = false end
         
-        -- Ensure quality settings exist
+        -- Quality settings
         if not vPeddlerDB.ignoreQuality then
             vPeddlerDB.ignoreQuality = {
                 [0] = true,  -- Poor (Grey)
@@ -64,40 +65,47 @@ function vPeddler_InitDefaults(force)
         end
         
         -- Ensure additional settings exist
-        if vPeddlerDB.autoFlagGrey == nil then vPeddlerDB.autoFlagGrey = true end
+        if vPeddlerDB.autoFlagGrays then vPeddler_AutoFlagGrayItems() end
         if vPeddlerDB.manualSellButton == nil then vPeddlerDB.manualSellButton = false end
         if vPeddlerDB.debug == nil then vPeddlerDB.debug = false end
         if vPeddlerDB.verboseMode == nil then vPeddlerDB.verboseMode = true end
+        if vPeddlerDB.autoFlagGray == nil then vPeddlerDB.autoFlagGray = true end
     end
+    
+    -- Standardize on autoFlagGrays with an 's'
+    if vPeddlerDB.autoFlagGrays == nil then 
+        vPeddlerDB.autoFlagGrays = true 
+    end
+    
+    -- Remove any old variants of the setting to avoid confusion
+    vPeddlerDB.autoFlagGray = nil
+    vPeddlerDB.autoFlagGrey = nil
+    
+    -- Ensure manuallyUnflagged table exists
+    vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
 end
 
--- Add these variables near the top of your file
 vPeddler.texturePool = {}
 vPeddler.lastUpdate = 0
 vPeddler.updateThrottle = 0.1 -- Seconds between bag updates
 
--- Add these variables to track sales
 vPeddler.currentSaleCache = {}
 vPeddler.totalEarnings = 0
 vPeddler.totalSold = 0
 
 -- Consolidated and optimized event registration
 
--- Create a single event frame near the top of your file
 local eventFrame = CreateFrame("Frame")
 
 function vPeddler_OnLoad()
-    -- Only register the initial loading event here
     eventFrame:RegisterEvent("ADDON_LOADED")
     eventFrame:SetScript("OnEvent", vPeddler_OnEvent)
 end
 
--- More robust event handling
 function vPeddler_OnEvent()
     if event == "ADDON_LOADED" then
         if arg1 == "vPeddler" then
             vPeddler_InitDefaults()
-            vPeddler_InitOptions()
             vPeddler_Initialize()
             
             -- Register remaining events after loading
@@ -105,6 +113,12 @@ function vPeddler_OnEvent()
             eventFrame:RegisterEvent("MERCHANT_CLOSED")
             eventFrame:RegisterEvent("BAG_UPDATE")
             eventFrame:RegisterEvent("ITEM_LOCK_CHANGED")
+            eventFrame:RegisterEvent("BAG_UPDATE_DELAYED")
+            
+            -- Run auto-flag for gray items if the setting is enabled
+            if vPeddlerDB and vPeddlerDB.autoFlagGrays then
+                C_Timer.After(1, vPeddler_AutoFlagGrayItems)
+            end
             
             DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Loaded and ready")
         end
@@ -130,6 +144,14 @@ function vPeddler_OnEvent()
         if vPeddler.sellButton then
             vPeddler.sellButton:Hide()
         end
+    elseif event == "BAG_UPDATE_DELAYED" then
+        -- Run auto-flag for gray items if enabled
+        if vPeddlerDB and vPeddlerDB.autoFlagGrays then
+            vPeddler_AutoFlagGrayItems()
+        end
+        
+        -- Update bag markers if they're visible
+        vPeddler_UpdateBagSlotMarkers()
     elseif event == "BAG_UPDATE" or event == "ITEM_LOCK_CHANGED" then
         -- Directly handle bag updates without unnecessary function calls
         vPeddler.needsUpdate = true
@@ -144,7 +166,6 @@ function vPeddler_OnEvent()
     end
 end
 
--- Call this immediately
 vPeddler_OnLoad()
 
 -- Auto-repair functionality
@@ -160,14 +181,12 @@ function vPeddler_AutoRepair()
     end
 end
 
--- Update the SellJunk function to use the pfUI approach:
-
 function vPeddler_SellJunk()
     -- Clear any existing queue
     vPeddler.sellQueue = {}
     vPeddler.queueSize = 0
     
-    -- Record the player's starting gold
+    -- Record starting gold
     vPeddler.startMoney = GetMoney()
     
     -- Scan all bags for junk
@@ -225,8 +244,6 @@ function vPeddler_GetItemId(link)
     return tonumber(id)
 end    
 
--- Replace the vPeddler_GetVendorPrice function with this more reliable version:
-
 function vPeddler_GetVendorPrice(bag, slot)
     -- Create tooltip if needed
     if not vPeddlerTooltip then
@@ -267,19 +284,16 @@ function vPeddler_FormatMoney(money)
     return vPeddler_GetCoinTextureString(money or 0)
 end
 
--- Update the hook container frames function to use our setting:
-
 function vPeddler_HookContainerFrames()
     -- Store the original function for later
     if not vPeddler.originalContainerFrameItemButton_OnClick then
         vPeddler.originalContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick
     end
     
-    -- Set up our custom hook
     ContainerFrameItemButton_OnClick = function(button)
         local shouldHandle = false
         
-        -- Determine which modifier key we're checking for
+        -- Determine which modifier key to check for
         local modKey = vPeddlerDB.modifierKey or "ALT"
         
         if modKey == "ALT" and IsAltKeyDown() and arg1 == "RightButton" then
@@ -298,22 +312,17 @@ function vPeddler_HookContainerFrames()
             if link then
                 local itemId = vPeddler_GetItemId(link)
                 if itemId then
-                    -- Get name safely
+                    -- Get item name
                     local name = GetItemInfo(link)
                     name = name or ("ItemID: "..itemId)
                     
                     -- Toggle flagged status
                     if vPeddlerDB.flaggedItems[itemId] then
-                        vPeddlerDB.flaggedItems[itemId] = nil
-                        
-                        -- Only show message if verbose mode is enabled
-                        if vPeddlerDB.verboseMode then
-                            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed "..link.." from auto-sell list")
-                        end
+                        vPeddler_UnflagItem(itemId, link)
                     else
                         vPeddlerDB.flaggedItems[itemId] = true
                         
-                        -- Only show message if verbose mode is enabled
+                        -- Print to chat if verbose mode is enabled
                         if vPeddlerDB.verboseMode then
                             DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added "..link.." to auto-sell list")
                         end
@@ -322,7 +331,7 @@ function vPeddler_HookContainerFrames()
                     -- Update all instances of this item across all bags
                     vPeddler_UpdateAllInstancesOfItem(itemId)
                     
-                    return -- Critical: Stop event propagation
+                    return
                 end
             end
         end
@@ -332,7 +341,7 @@ function vPeddler_HookContainerFrames()
     end
 end
 
--- New function to update just a single slot marker
+-- Function to update just a single slot marker
 function vPeddler_UpdateSingleSlotMarker(bag, slot)
     -- Skip if DB isn't ready
     if not vPeddlerDB then return end
@@ -417,7 +426,7 @@ function vPeddler_UpdateSingleSlotMarker(bag, slot)
             textureSize = "64"
         end
         
-        -- Use proper path based on outline setting
+        -- Adjust file path based on outline setting
         if vPeddlerDB.iconOutline then
             texturePath = "Interface\\AddOns\\vPeddler\\textures\\Peddler_outline_" .. textureSize .. ".tga"
         else
@@ -447,7 +456,6 @@ end
 eventFrame:SetScript("OnEvent", vPeddler_OnEvent)
 eventFrame:RegisterEvent("ADDON_LOADED")
 
--- Add to the end of your file or where appropriate
 function vPeddler_Initialize()
     -- Set up hooks
     vPeddler_HookContainerFrames()
@@ -470,7 +478,7 @@ function vPeddler_Initialize()
         vPeddler_UpdateBagMarkers(bag)
     end
     
-    -- New function to update just one bag's markers
+    -- Function to update just one bag's markers
     function vPeddler_UpdateBagMarkers(bag)
         if not bag then return end
         
@@ -479,13 +487,11 @@ function vPeddler_Initialize()
             vPeddler_UpdateSingleSlotMarker(bag, slot)
         end
     end
-    
-    -- Replace your ContainerFrame_Update hook with this safer version:
 
     -- More efficient update on ContainerFrame_Update - just update the specific bag
     local orig_ContainerFrame_Update = ContainerFrame_Update
     ContainerFrame_Update = function(frame)
-        -- Always call original function first - with proper safety
+        -- Always call original function first
         if not frame then
             -- Default behavior when frame is nil
             orig_ContainerFrame_Update()
@@ -504,11 +510,16 @@ function vPeddler_Initialize()
         -- Update just this bag's markers
         vPeddler_UpdateBagMarkers(bag)
     end
-    
-    -- Rest of your initialization code
-end
 
--- Replace the vPeddler_UpdateBagSlotMarkers function with this optimized version
+    -- Run auto-flag for gray items if enabled
+    if vPeddlerDB and vPeddlerDB.autoFlagGrays then
+        -- Add a debug message
+        if vPeddlerDB.verboseMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Running initial auto-flag for gray items...")
+        end
+        vPeddler_AutoFlagGrayItems()
+    end
+end
 
 function vPeddler_UpdateBagSlotMarkers()
     for bag = 0, 4 do
@@ -519,7 +530,7 @@ function vPeddler_UpdateBagSlotMarkers()
     end
 end
 
--- Optimized function to check if a bag is open
+-- Function to check if a bag is open
 function vPeddler_IsBagOpen(bagID)
     -- Bag 0 = Backpack has a special frame
     if bagID == 0 then
@@ -550,7 +561,7 @@ function vPeddler_GetTexture(name)
     end
     
     -- No existing texture, create new one
-    return nil -- Will be created in calling function
+    return nil
 end
 
 function vPeddler_ReleaseTexture(texture)
@@ -597,7 +608,7 @@ vPeddler.sellFrame = CreateFrame("Frame")
 -- Update the process queue function
 function vPeddler_ProcessSellQueue()
     if vPeddler.queueSize <= 0 then
-        -- All done! Calculate how much we earned
+        -- Calculate Earnings
         local earned = GetMoney() - vPeddler.startMoney
         
         -- Only report if we actually sold something
@@ -643,7 +654,6 @@ function vPeddler_ProcessSellQueue()
     end)
 end
 
--- Add this at the end of your file
 SLASH_VPDEBUG1 = "/vpdebug"
 SlashCmdList["VPDEBUG"] = function(msg)
     -- Show current settings
@@ -674,8 +684,6 @@ function vPeddler_OnBagUpdate(event, bagID)
         vPeddler_UpdateBagSlotMarkers()
     end
 end
-
--- Replace the entire function with this clean version:
 
 function vPeddler_BuildItemCache()
     vPeddler.itemCache = {}  -- Reset cache
@@ -712,7 +720,7 @@ function vPeddler_BuildItemCache()
     vPeddler.needsUpdate = false  -- Reset the update flag
 end
 
--- Add this new function to update all instances of an item
+-- Function to update all instances of an item
 
 function vPeddler_UpdateAllInstancesOfItem(itemId)
     -- Skip if no itemId provided
@@ -739,7 +747,6 @@ function vPeddler_UpdateAllInstancesOfItem(itemId)
     end
 end
 
--- Replace all instances of GetCoinTextureString in your code with vPeddler_GetCoinTextureString
 function vPeddler_GetCoinTextureString(money)
     if not money or money == 0 then return "0|cFFB87333c|r" end
     
@@ -765,7 +772,6 @@ function vPeddler_GetCoinTextureString(money)
     return text
 end
 
--- Replace the coin test command
 SLASH_VPCOIN1 = "/vpcoin"
 SlashCmdList["VPCOIN"] = function(msg)
     -- Show various amounts with coin textures
@@ -776,7 +782,7 @@ SlashCmdList["VPCOIN"] = function(msg)
     DEFAULT_CHAT_FRAME:AddMessage("Mixed: " .. vPeddler_GetCoinTextureString(12345))
 end
 
--- Add a function to refresh all markers when settings change
+-- Function to refresh all markers when settings change
 
 function vPeddler_RefreshAllMarkers()
     -- Clear the cache
@@ -816,4 +822,129 @@ function vPeddler_CreateManualSellButton()
     end)
     
     vPeddler.sellButton = button
+end
+
+-- More robust gray item detection without using _G
+
+function vPeddler_AutoFlagGrayItems(forceFlag)
+    if not vPeddlerDB then return end
+    
+    local flaggedCount = 0
+    local grayCount = 0
+    
+    -- Process all items in all bags
+    for bag = 0, 4 do
+        local slots = GetContainerNumSlots(bag)
+        for slot = 1, slots do
+            local link = GetContainerItemLink(bag, slot)
+            if link then
+                -- Check if it's gray by examining the color code in the item link
+                -- Gray items have the color code |cff9d9d9d
+                local isGray = string.find(link, "|cff9d9d9d")
+                
+                if isGray then
+                    grayCount = grayCount + 1
+                    local itemId = vPeddler_GetItemId(link)
+                    if itemId then
+                        -- Only flag if not explicitly unflagged previously
+                        if not (vPeddlerDB.manuallyUnflagged and vPeddlerDB.manuallyUnflagged[itemId]) or forceFlag then
+                            -- Auto-flag this item
+                            vPeddlerDB.flaggedItems[itemId] = true
+                            flaggedCount = flaggedCount + 1
+                            
+                            -- Debug output for each item flagged
+                            if vPeddlerDB.verboseMode then
+                                DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Flagged " .. link)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Always update the markers after flagging items
+    vPeddler_UpdateBagSlotMarkers()
+    
+    -- Show summary message
+    if vPeddlerDB.verboseMode then
+        if grayCount > 0 then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Found " .. grayCount .. " gray items, auto-flagged " .. flaggedCount .. " for selling")
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: No gray items found in bags")
+        end
+    end
+    
+    return flaggedCount
+end
+
+-- Helper function to count total bag slots
+function getNumTotalBagSlots()
+    local count = 0
+    for bag = 0, 4 do
+        count = count + GetContainerNumSlots(bag)
+    end
+    return count
+end
+
+-- Function to handle bag updates (when items are added to bags)
+function vPeddler_OnBagUpdateDelayed()
+    -- Auto-flag any gray items in bags
+    if vPeddlerDB and vPeddlerDB.autoFlagGrays then
+        vPeddler_AutoFlagGrayItems()
+    end
+    
+    -- Update bag markers if they're visible
+    vPeddler_UpdateBagSlotMarkers()
+end
+
+-- Enhanced function to handle manually unflagging an item
+function vPeddler_UnflagItem(itemId, link)
+    if not itemId then return end
+    
+    -- Remove from flagged items
+    if vPeddlerDB.flaggedItems[itemId] then
+        vPeddlerDB.flaggedItems[itemId] = nil
+    end
+    
+    -- Check if this is a gray item by looking at the link color
+    local isGray = link and string.find(link, "|cff9d9d9d")
+    
+    -- Only add to manually unflagged if it's a gray item
+    if isGray then
+        -- Remember that this item was manually unflagged
+        vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
+        vPeddlerDB.manuallyUnflagged[itemId] = true
+    end
+    
+    -- Print to chat if verbose mode is enabled
+    if vPeddlerDB.verboseMode then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed " .. (link or itemId) .. " from auto-sell list")
+    end
+    
+    -- Update all instances of this item
+    vPeddler_UpdateAllInstancesOfItem(itemId)
+end
+
+-- Function to clear flags on all gray items
+function vPeddler_ClearAllGrayItemFlags()
+    -- Loop through all items in bags to identify gray ones
+    for bag = 0, 4 do
+        local slots = GetContainerNumSlots(bag)
+        for slot = 1, slots do
+            local link = GetContainerItemLink(bag, slot)
+            if link then
+                -- Check if it's gray by examining the color code
+                local isGray = string.find(link, "|cff9d9d9d")
+                
+                if isGray then
+                    local itemId = vPeddler_GetItemId(link)
+                    if itemId then
+                        -- Remove it from flagged items
+                        vPeddlerDB.flaggedItems[itemId] = nil
+                    end
+                end
+            end
+        end
+    end
 end

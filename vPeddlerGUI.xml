@@ -4,7 +4,7 @@
     <!-- Main Options Frame -->
     <Frame name="vPeddlerOptionsFrame" toplevel="true" movable="true" enableMouse="true" parent="UIParent" hidden="true">
         <Size>
-            <AbsDimension x="350" y="440"/>
+            <AbsDimension x="350" y="470"/>
         </Size>
         <Anchors>
             <Anchor point="CENTER"/>
@@ -94,12 +94,12 @@
                 </Scripts>
             </CheckButton>
             
-            <!-- Auto Flag Grays Checkbox -->
+            <!-- Auto Flag Grays Checkbox - Correctly positioned after AutoSellJunk -->
             <CheckButton name="vPeddlerAutoFlagGraysCheckbox" inherits="OptionsCheckButtonTemplate">
                 <Anchors>
-                    <Anchor point="TOPLEFT" relativeTo="vPeddlerAutoSellCheckbox" relativePoint="TOPLEFT">
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerAutoSellCheckbox" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="0" y="-30"/>
+                            <AbsDimension x="0" y="0"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -109,13 +109,13 @@
                     </OnClick>
                 </Scripts>
             </CheckButton>
-            
-            <!-- Manual Sell Button Checkbox -->
+
+            <!-- Manual Sell Button Checkbox - Properly anchored to AutoFlagGrays -->
             <CheckButton name="vPeddlerManualSellButtonCheckbox" inherits="OptionsCheckButtonTemplate">
                 <Anchors>
-                    <Anchor point="TOPLEFT" relativeTo="vPeddlerAutoSellCheckbox" relativePoint="TOPLEFT">
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerAutoFlagGraysCheckbox" relativePoint="BOTTOMLEFT">
                         <Offset>
-                            <AbsDimension x="0" y="-30"/>
+                            <AbsDimension x="0" y="0"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -126,10 +126,14 @@
                 </Scripts>
             </CheckButton>
 
-            <!-- Verbose Mode Checkbox -->
+            <!-- Verbose Mode Checkbox - Correctly anchored to ManualSellButton -->
             <CheckButton name="vPeddlerVerboseModeCheckbox" inherits="OptionsCheckButtonTemplate">
                 <Anchors>
-                    <Anchor point="TOPLEFT" relativeTo="vPeddlerManualSellButtonCheckbox" relativePoint="BOTTOMLEFT" />
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerManualSellButtonCheckbox" relativePoint="BOTTOMLEFT">
+                        <Offset>
+                            <AbsDimension x="0" y="0"/>
+                        </Offset>
+                    </Anchor>
                 </Anchors>
                 <Scripts>
                     <OnClick>
@@ -201,6 +205,112 @@
                     </OnValueChanged>
                 </Scripts>
             </Slider>
+            
+            <!-- Icon Texture Selection -->
+            <Frame name="vPeddlerIconTextureDropdown" inherits="UIDropDownMenuTemplate">
+                <Anchors>
+                    <!-- Anchor to the bottom of the alpha slider (where modifier key was) -->
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerIconAlphaSlider" relativePoint="BOTTOMLEFT">
+                        <Offset>
+                            <AbsDimension x="-15" y="-27"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnLoad>
+                        UIDropDownMenu_SetWidth(120);
+                        UIDropDownMenu_Initialize(this, vPeddlerOptions_IconTextureDropdown_Initialize);
+                    </OnLoad>
+                </Scripts>
+            </Frame>
+            
+            <Frame name="vPeddlerIconTextureLabel">
+                <Size>
+                    <AbsDimension x="140" y="20"/>
+                </Size>
+                <Anchors>
+                    <Anchor point="BOTTOMLEFT" relativeTo="vPeddlerIconTextureDropdown" relativePoint="TOPLEFT">
+                        <Offset>
+                            <AbsDimension x="20" y="0"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Layers>
+                    <Layer level="OVERLAY">
+                        <FontString name="$parentText" inherits="GameFontNormalSmall" text="Icon Texture:">
+                            <Anchors>
+                                <Anchor point="LEFT"/>
+                            </Anchors>
+                        </FontString>
+                    </Layer>
+                </Layers>
+            </Frame>
+            
+            <!-- Icon Preview -->
+            <Frame name="vPeddlerIconPreview">
+                <Size>
+                    <AbsDimension x="40" y="40"/>
+                </Size>
+                <Anchors>
+                    <Anchor point="LEFT" relativeTo="vPeddlerIconTextureDropdown" relativePoint="RIGHT">
+                        <Offset>
+                            <AbsDimension x="-10" y="2"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Layers>
+                    <Layer level="ARTWORK">
+                        <Texture name="vPeddlerIconPreviewTexture" file="Interface\AddOns\vPeddler\coins.tga">
+                            <Size>
+                                <AbsDimension x="32" y="32"/>
+                            </Size>
+                            <Anchors>
+                                <Anchor point="CENTER"/>
+                            </Anchors>
+                        </Texture>
+                    </Layer>
+                </Layers>
+            </Frame>
+
+            <!-- Modifier Key Dropdown -->
+            <Frame name="vPeddlerModifierKeyDropdown" inherits="UIDropDownMenuTemplate">
+                <Anchors>
+                    <!-- Now anchor to the bottom of the icon texture dropdown (which is now on top) -->
+                    <Anchor point="TOPLEFT" relativeTo="vPeddlerIconTextureDropdown" relativePoint="BOTTOMLEFT">
+                        <Offset>
+                            <AbsDimension x="0" y="-23"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnLoad>
+                        UIDropDownMenu_SetWidth(120);
+                        UIDropDownMenu_Initialize(this, vPeddlerOptions_ModifierKeyDropdown_Initialize);
+                    </OnLoad>
+                </Scripts>
+            </Frame>
+            
+            <Frame name="vPeddlerModifierKeyLabel">
+                <Size>
+                    <AbsDimension x="140" y="20"/>
+                </Size>
+                <Anchors>
+                    <Anchor point="BOTTOMLEFT" relativeTo="vPeddlerModifierKeyDropdown" relativePoint="TOPLEFT">
+                        <Offset>
+                            <AbsDimension x="20" y="0"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Layers>
+                    <Layer level="OVERLAY">
+                        <FontString name="$parentText" inherits="GameFontNormalSmall" text="Modifier Key:">
+                            <Anchors>
+                                <Anchor point="LEFT"/>
+                            </Anchors>
+                        </FontString>
+                    </Layer>
+                </Layers>
+            </Frame>
             
             <!-- Icon Position Label -->
             <Frame name="vPeddlerIconPositionFrame">
@@ -326,110 +436,6 @@
                 </Frames>
             </Frame>
             
-            <!-- Modifier Key Dropdown -->
-            <Frame name="vPeddlerModifierKeyDropdown" inherits="UIDropDownMenuTemplate">
-                <Anchors>
-                    <Anchor point="TOPLEFT" relativeTo="vPeddlerIconAlphaSlider" relativePoint="BOTTOMLEFT">
-                        <Offset>
-                            <AbsDimension x="-15" y="-27"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-                <Scripts>
-                    <OnLoad>
-                        UIDropDownMenu_SetWidth(120);
-                        UIDropDownMenu_Initialize(this, vPeddlerOptions_ModifierKeyDropdown_Initialize);
-                    </OnLoad>
-                </Scripts>
-            </Frame>
-            
-            <Frame name="vPeddlerModifierKeyLabel">
-                <Size>
-                    <AbsDimension x="140" y="20"/>
-                </Size>
-                <Anchors>
-                    <Anchor point="BOTTOMLEFT" relativeTo="vPeddlerModifierKeyDropdown" relativePoint="TOPLEFT">
-                        <Offset>
-                            <AbsDimension x="20" y="0"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-                <Layers>
-                    <Layer level="OVERLAY">
-                        <FontString name="$parentText" inherits="GameFontNormalSmall" text="Modifier Key:">
-                            <Anchors>
-                                <Anchor point="LEFT"/>
-                            </Anchors>
-                        </FontString>
-                    </Layer>
-                </Layers>
-            </Frame>
-            
-            <!-- Icon Texture Selection -->
-            <Frame name="vPeddlerIconTextureDropdown" inherits="UIDropDownMenuTemplate">
-                <Anchors>
-                    <Anchor point="TOPLEFT" relativeTo="vPeddlerModifierKeyDropdown" relativePoint="BOTTOMLEFT">
-                        <Offset>
-                            <AbsDimension x="0" y="-23"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-                <Scripts>
-                    <OnLoad>
-                        UIDropDownMenu_SetWidth(120);
-                        UIDropDownMenu_Initialize(this, vPeddlerOptions_IconTextureDropdown_Initialize);
-                    </OnLoad>
-                </Scripts>
-            </Frame>
-            
-            <Frame name="vPeddlerIconTextureLabel">
-                <Size>
-                    <AbsDimension x="140" y="20"/>
-                </Size>
-                <Anchors>
-                    <Anchor point="BOTTOMLEFT" relativeTo="vPeddlerIconTextureDropdown" relativePoint="TOPLEFT">
-                        <Offset>
-                            <AbsDimension x="20" y="0"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-                <Layers>
-                    <Layer level="OVERLAY">
-                        <FontString name="$parentText" inherits="GameFontNormalSmall" text="Icon Texture:">
-                            <Anchors>
-                                <Anchor point="LEFT"/>
-                            </Anchors>
-                        </FontString>
-                    </Layer>
-                </Layers>
-            </Frame>
-            
-            <!-- Icon Preview -->
-            <Frame name="vPeddlerIconPreview">
-                <Size>
-                    <AbsDimension x="40" y="40"/>
-                </Size>
-                <Anchors>
-                    <Anchor point="LEFT" relativeTo="vPeddlerIconTextureDropdown" relativePoint="RIGHT">
-                        <Offset>
-                            <AbsDimension x="-10" y="2"/>
-                        </Offset>
-                    </Anchor>
-                </Anchors>
-                <Layers>
-                    <Layer level="ARTWORK">
-                        <Texture name="vPeddlerIconPreviewTexture" file="Interface\AddOns\vPeddler\coins.tga">
-                            <Size>
-                                <AbsDimension x="32" y="32"/>
-                            </Size>
-                            <Anchors>
-                                <Anchor point="CENTER"/>
-                            </Anchors>
-                        </Texture>
-                    </Layer>
-                </Layers>
-            </Frame>
-
             <!-- Reset Filters Button -->
             <Button name="vPeddlerResetFiltersButton" inherits="UIPanelButtonTemplate" text="Reset Filters">
                 <Size>

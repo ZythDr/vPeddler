@@ -206,20 +206,10 @@ local function UpdateAllButtons()
     end
     
     Debug("Updated " .. markedCount .. " buttons out of " .. totalButtons .. " visible")
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Marked " .. markedCount .. " vendor trash items")
-end
-
--- Test function to mark all buttons
-local function TestMarkAllButtons()
-    local count = 0
-    for i = 1, 500 do
-        local button = getglobal("BagshuiBagsItem" .. i)
-        if button and button:IsVisible() then
-            MarkButton(button)
-            count = count + 1
-        end
+    -- Only show this message when debug mode is enabled
+    if debugMode then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Marked " .. markedCount .. " vendor trash items")
     end
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added test markers to " .. count .. " buttons")
 end
 
 -- Verify Bagshui button structure

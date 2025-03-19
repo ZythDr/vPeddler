@@ -1,117 +1,4 @@
--- vPeddler Options Panel for Vanilla WoW 1.12
-
-function vPeddler_CreateOptionsPanel()
-    -- Create standalone frame
-    local panel = CreateFrame("Frame", "vPeddlerOptionsFrame", UIParent)
-    panel:SetWidth(350)
-    panel:SetHeight(250)
-    panel:SetPoint("CENTER", UIParent, "CENTER", 0, 0)  -- Fixed this line
-    panel:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true,
-        tileSize = 32,
-        edgeSize = 32,
-        insets = { left = 11, right = 12, top = 12, bottom = 11 }
-    })
-    panel:SetBackdropColor(0, 0, 0, 1)
-    panel:EnableMouse(true)
-    panel:SetMovable(true)
-    panel:RegisterForDrag("LeftButton")
-    panel:SetScript("OnDragStart", function() this:StartMoving() end)
-    panel:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
-    panel:Hide()
-    
-    -- Title
-    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    title:SetPoint("TOP", panel, "TOP", 0, -20)  -- Fixed this line
-    title:SetText("vPeddler Options")
-    
-    -- Create a close button
-    local closeButton = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -5, -5)  -- Fixed this line
-    
-    -- Enable checkbox
-    local enableCheck = CreateFrame("CheckButton", "vPeddlerEnableCheck", panel, "UICheckButtonTemplate")
-    enableCheck:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -50)  -- Fixed this line
-    getglobal(enableCheck:GetName().."Text"):SetText("Enable vPeddler")
-    enableCheck.tooltip = "Enable or disable vPeddler functionality"
-    enableCheck:SetChecked(vPeddlerDB.enabled)
-    enableCheck:SetScript("OnClick", function()
-        vPeddlerDB.enabled = this:GetChecked()
-    end)
-    
-    -- Auto-sell checkbox
-    local autoSellCheck = CreateFrame("CheckButton", "vPeddlerAutoSellCheck", panel, "UICheckButtonTemplate")
-    autoSellCheck:SetPoint("TOPLEFT", enableCheck, "BOTTOMLEFT", 0, -8)
-    getglobal(autoSellCheck:GetName().."Text"):SetText("Automatically sell grey items")
-    autoSellCheck.tooltip = "Automatically sell all grey quality items when visiting a vendor"
-    autoSellCheck:SetChecked(vPeddlerDB.autoSell)
-    autoSellCheck:SetScript("OnClick", function()
-        vPeddlerDB.autoSell = this:GetChecked()
-    end)
-    
-    -- Auto-repair checkbox
-    local autoRepairCheck = CreateFrame("CheckButton", "vPeddlerAutoRepairCheck", panel, "UICheckButtonTemplate")
-    autoRepairCheck:SetPoint("TOPLEFT", autoSellCheck, "BOTTOMLEFT", 0, -8)
-    getglobal(autoRepairCheck:GetName().."Text"):SetText("Automatically repair equipment")
-    autoRepairCheck.tooltip = "Automatically repair all equipment when visiting a vendor"
-    autoRepairCheck:SetChecked(vPeddlerDB.autoRepair)
-    autoRepairCheck:SetScript("OnClick", function()
-        vPeddlerDB.autoRepair = this:GetChecked()
-    end)
-
-    -- Auto-flag gray items checkbox
-    local autoFlagGrayCheckbox = CreateFrame("CheckButton", "vPeddlerAutoFlagGrayCheckbox", vPeddlerOptionsFrame, "UICheckButtonTemplate")
-    autoFlagGrayCheckbox:SetPoint("TOPLEFT", verboseModeCheckbox, "BOTTOMLEFT", 0, -10)
-    autoFlagGrayCheckbox:SetChecked(vPeddlerDB.autoFlagGray)
-    getglobal(autoFlagGrayCheckbox:GetName() .. "Text"):SetText("Automatically flag gray items for selling")
-    autoFlagGrayCheckbox:SetScript("OnClick", function()
-        vPeddlerDB.autoFlagGray = this:GetChecked()
-        if vPeddlerDB.verboseMode then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flag gray items " .. (vPeddlerDB.autoFlagGray and "enabled" or "disabled"))
-        end
-        vPeddler.OnOptionSet("autoFlagGray", vPeddlerDB.autoFlagGray)
-    end)
-    
-    -- Label for quality filters
-    local qualityLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    qualityLabel:SetPoint("TOPLEFT", autoRepairCheck, "BOTTOMLEFT", 0, -20)
-    qualityLabel:SetText("Auto-sell these item qualities:")
-    
-    -- Quality checkboxes
-    local qualities = {
-        [0] = {name = "Poor (Grey)", color = {r=0.62, g=0.62, b=0.62}},
-        [1] = {name = "Common (White)", color = {r=1, g=1, b=1}},
-        [2] = {name = "Uncommon (Green)", color = {r=0.1, g=1, b=0.1}},
-        [3] = {name = "Rare (Blue)", color = {r=0.1, g=0.1, b=1}},
-        [4] = {name = "Epic (Purple)", color = {r=0.8, g=0.1, b=0.8}},
-        [5] = {name = "Legendary (Orange)", color = {r=1, g=0.5, b=0}},
-    }
-    
-    local lastCheck
-    for i=0, 5 do
-        local qualityCheck = CreateFrame("CheckButton", "vPeddlerQualityCheck"..i, panel, "UICheckButtonTemplate")
-        if i == 0 then
-            qualityCheck:SetPoint("TOPLEFT", qualityLabel, "BOTTOMLEFT", 0, -8)
-        else
-            qualityCheck:SetPoint("TOPLEFT", lastCheck, "BOTTOMLEFT", 0, -8)
-        end
-        
-        local text = getglobal(qualityCheck:GetName().."Text")
-        text:SetText(qualities[i].name)
-        text:SetTextColor(qualities[i].color.r, qualities[i].color.g, qualities[i].color.b)
-        
-        qualityCheck:SetChecked(vPeddlerDB.ignoreQuality[i])
-        qualityCheck:SetScript("OnClick", function()
-            vPeddlerDB.ignoreQuality[i] = this:GetChecked()
-        end)
-        
-        lastCheck = qualityCheck
-    end
-    
-    return panel
-end
+-- vPeddler Options for Vanilla WoW 1.12
 
 -- Store current settings locally for editing
 local tempSettings = {}
@@ -133,6 +20,7 @@ function vPeddlerOptions_OnLoad()
     getglobal(vPeddlerAutoRepairCheckbox:GetName().."Text"):SetText("Auto Repair (WIP)");
     getglobal(vPeddlerAutoSellCheckbox:GetName().."Text"):SetText("Auto Sell Junk");
     getglobal(vPeddlerManualSellButtonCheckbox:GetName().."Text"):SetText("Use Manual Sell Button (WIP)");
+    getglobal(vPeddlerAutoFlagGraysCheckbox:GetName().."Text"):SetText("Auto-Flag Gray Items");
     getglobal(vPeddlerVerboseModeCheckbox:GetName().."Text"):SetText("Verbose Mode");    
     -- Add this line
     getglobal(vPeddlerIconOutlineCheckbox:GetName().."Text"):SetText("Outline");
@@ -171,6 +59,7 @@ function vPeddlerOptions_OnShow()
     vPeddlerAutoRepairCheckbox:SetChecked(vPeddlerDB.autoRepair)
     vPeddlerAutoSellCheckbox:SetChecked(vPeddlerDB.autoSell)
     vPeddlerManualSellButtonCheckbox:SetChecked(vPeddlerDB.manualSellButton)
+    vPeddlerAutoFlagGraysCheckbox:SetChecked(vPeddlerDB.autoFlagGrays)
     vPeddlerVerboseModeCheckbox:SetChecked(vPeddlerDB.verboseMode)
     
     -- Set the slider directly to the actual pixel size value
@@ -267,14 +156,30 @@ function vPeddlerOptions_AutoSellToggle()
 end
 
 function vPeddlerOptions_AutoFlagGraysToggle()
-    vPeddlerDB.autoFlagGrays = vPeddlerAutoFlagGraysCheckbox:GetChecked();
+    -- Get the current state directly from the checkbox
+    vPeddlerDB.autoFlagGrays = vPeddlerAutoFlagGraysCheckbox:GetChecked()
     
-    -- If enabled, flag all gray items
     if vPeddlerDB.autoFlagGrays then
-        vPeddlerDB.ignoreQuality[0] = true;
+        -- WHEN CHECKED: Clear any existing flags on gray items so we start fresh
+        vPeddler_ClearAllGrayItemFlags()
+        
+        -- Then auto-flag all gray items (except manually unflagged ones)
+        vPeddler_AutoFlagGrayItems(true)
+        
+        if vPeddlerDB.verboseMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flag gray items enabled")
+        end
     else
-        vPeddlerDB.ignoreQuality[0] = false;
+        -- WHEN UNCHECKED: Clear all gray item flags
+        vPeddler_ClearAllGrayItemFlags()
+        
+        if vPeddlerDB.verboseMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flag gray items disabled, gray items unflagged")
+        end
     end
+    
+    -- Update the bag displays
+    vPeddler_UpdateBagSlotMarkers()
 end
 
 function vPeddlerOptions_ManualSellButtonToggle()
@@ -448,28 +353,22 @@ end
 -- Add this new function to reset flagged items:
 
 function vPeddlerOptions_ResetFilters()
-    -- Ask for confirmation
-    StaticPopupDialogs["VPEDDLER_RESET_FILTERS"] = {
-        text = "Reset all manually flagged items?\n\nThis will clear your auto-sell list but keep your other settings.",
-        button1 = "Yes",
-        button2 = "No",
-        OnAccept = function()
-            -- Clear flagged items table
-            vPeddlerDB.flaggedItems = {}
-            
-            -- Force rebuild item cache and update all markers
-            vPeddler.needsUpdate = true
-            vPeddler_BuildItemCache()
-            vPeddler_UpdateBagSlotMarkers()
-            
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-sell list has been cleared")
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = true,
-    }
+    -- Reset manually flagged items
+    vPeddlerDB.flaggedItems = {}
     
-    StaticPopup_Show("VPEDDLER_RESET_FILTERS")
+    -- Reset manually unflagged items
+    vPeddlerDB.manuallyUnflagged = {}
+    
+    -- If auto-flag is enabled, flag all gray items
+    if vPeddlerDB.autoFlagGrays then
+        vPeddler_AutoFlagGrayItems(true)
+    end
+    
+    -- Update bag markers
+    vPeddler_UpdateBagSlotMarkers()
+    
+    -- Notify user
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: All filters have been reset")
 end
 
 -- Slash command handler
@@ -554,6 +453,20 @@ function vPeddler_InitDefaults(force)
     vPeddlerDB.debug = vPeddlerDB.debug or false
 end
 
+-- Auto-add gray quality items to sell list
+function vPeddlerOptions_AutoFlagGraysToggle()
+    -- Get the current state directly from the checkbox
+    vPeddlerDB.autoFlagGrays = vPeddlerAutoFlagGraysCheckbox:GetChecked()
+    
+    -- If enabled, immediately auto-flag any gray items
+    if vPeddlerDB.autoFlagGrays then
+        if vPeddlerDB.verboseMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flagging gray items...")
+        end
+        vPeddler_AutoFlagGrayItems()
+    end
+end
+
 -- Update the vPeddler.lua file to implement these new settings
 function vPeddler_UpdateHookBasedOnModifier()
     -- Unhook existing
@@ -589,7 +502,7 @@ function vPeddler_UpdateHookBasedOnModifier()
                 if itemId then
                     -- Toggle flagged status
                     if vPeddlerDB.flaggedItems[itemId] then
-                        vPeddlerDB.flaggedItems[itemId] = nil
+                        vPeddler_UnflagItem(itemId, link)
                         DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed item from auto-sell list")
                     else
                         vPeddlerDB.flaggedItems[itemId] = true
@@ -605,19 +518,6 @@ function vPeddler_UpdateHookBasedOnModifier()
         
         -- Call original handler
         vPeddler.originalContainerFrameItemButton_OnClick(button)
-    end
-end
-
--- Initialize options panel when player logs in
-function vPeddler_InitOptions()
-    vPeddler.optionsPanel = vPeddler_CreateOptionsPanel()
-    
-    -- Add slash command to open options
-    SLASH_VPEDDLEROPTIONS1 = "/vpopt"
-    SLASH_VPEDDLEROPTIONS2 = "/vpo"
-    
-    SlashCmdList["VPEDDLEROPTIONS"] = function(msg)
-        vPeddler.optionsPanel:Show()
     end
 end
 

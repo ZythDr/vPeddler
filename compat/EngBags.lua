@@ -151,7 +151,7 @@ local function HookButtonClick(button)
                     if not vPeddlerDB.flaggedItems then vPeddlerDB.flaggedItems = {} end
                     
                     if vPeddlerDB.flaggedItems[itemId] then
-                        vPeddlerDB.flaggedItems[itemId] = nil
+                        vPeddler_UnflagItem(itemId, link)
                         -- Only show message if verboseMode is enabled
                         if vPeddlerDB.verboseMode then
                             Message("Removed " .. link .. " from auto-sell list")
