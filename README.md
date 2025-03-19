@@ -1,26 +1,32 @@
 # vPeddler - Peddler for Vanilla WoW 1.12
 
-A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life features and usage.
-
-## Features
-
-- **Auto-Sell:** Automatically sells any flagged items when visiting vendors
-- **Visual Indicators:** Marks auto-sell items in your bags with customizable coin icons
-- **Manual Item Flagging:** Right-click with modifier key to manually add/remove any item in your inventory to your auto-sell list
-- **Auto-flag Gray Items:** By default, vPeddler will automatically flag any gray items in your inventory
-> - **Full Quality-Based Filters:** Select which item quality levels (Poor, Common, Uncommon, etc.) should be automatically sold  
-> <sup>WIP, not yet implemented, may come as a separate plugin for vPeddler instead</sup>
-
-### Automatic Repairs
-- **Auto-Repair:** Automatically repairs all your equipment when visiting a vendor  
-- **Repair Cost Reports:** Shows the cost of repairs in chat  
+A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life features and usage. <br />
+<br />
 
 ## Usage
 
 1. **Mark Items for Auto-Sell:** Hold your chosen modifier key (Alt by default) and right-click any item in your bags to toggle it as vendor trash
 2. **Auto-Sell Behavior:** When visiting vendors, all marked items ~~and items matching your quality filters~~ (wip) will be sold automatically
 
-### Customization
+## Features 
+<img src="https://github.com/user-attachments/assets/11d22488-e91b-46e9-9f8d-0b0bdaf89215" float="right" align="right" width="220" >  
+
+- **Auto-Sell:** Automatically sells any flagged items when visiting vendors
+- **Visual Indicators:** Marks auto-sell items in your bags with customizable coin icons
+- **Manual Item Flagging:** Right-click with modifier key to manually add/remove any item in  
+your inventory to your auto-sell list
+- **Auto-flag Gray Items:** By default, vPeddler automatically flags gray items to auto-sell list
+> - **Full Quality-Based Filters:** Select which item quality levels  
+(Poor, Common, Uncommon, etc.) should be automatically sold  
+> <sup>WIP, not yet implemented, may come as a separate plugin for vPeddler instead</sup>
+
+### Automatic Repairs
+- **Auto-Repair:** Automatically repairs all your equipment when visiting a vendor  
+- **Repair Cost Reports:** Shows the cost of repairs in chat  
+
+**Customization**
+ <img src="https://github.com/user-attachments/assets/6437e075-2128-4e7b-99cf-29b59f44b3ee" float="right" align="right" width="220"> 
+
 - **Icon Customization:**
   - Size (10-40 pixels)
   - Position (5 options: Top-Left, Top-Right, Center, Bottom-Left, Bottom-Right)
@@ -30,11 +36,12 @@ A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life fea
 
 - **Interaction Options:**
   - Customizable modifier (Alt, Ctrl, Shift) for item flagging
-  - Verbose mode showing what was added or removed from auto-sell list
+  - Verbose mode showing what was added or removed from auto-sell list  
 >  - ~~Option for manual sell button instead of automatic selling~~  
 > WIP
+<img src="https://github.com/user-attachments/assets/89996115-56d0-4bca-8601-caf5f6068899" float="right" align="right" width="300"> 
 
-## Addon Compatibility  
+**Addon Compatibility**  
 - [x] Compatible with default bags  
 - [x] Compatible with Bagshui  
 - [x] Compatible with Bagnon  
@@ -43,9 +50,9 @@ A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life fea
 - [x] Compatible with SUCC-bag  
 - [x] Compatible with Turtle-Dragonflight/tDF UI  
 
-## Commands
+**Commands**
 
-- `/vp` or `/vpeddler` - Toggle options panel (contains all relevant options in a user-friendly GUI)
+- `/vp` or `/vpeddler` - Options Panel (contains all relevant options in a user-friendly GUI)
 - `/vp reset` - Reset all settings to defaults
 - `/vp resetfilters` - Clear all manually flagged items
 - `/vp help` - Show help text
