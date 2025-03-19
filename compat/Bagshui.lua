@@ -1,21 +1,58 @@
 -- vPeddler compatibility module for Bagshui
 
--- Only load if Bagshui exists
-if not Bagshui then
-    return
+-- 1. First, define a central debug function near the top of the file
+local function Debug(msg)
+    -- Only show debug messages if debug mode is enabled
+    if not vPeddlerDB or not vPeddlerDB.debug then return end
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler-Bagshui|r: " .. tostring(msg))
 end
 
--- Make sure vPeddler is also loaded
-if not vPeddlerDB then 
-    return 
+local function CheckAddonsLoaded()
+    -- Check for Bagshui using multiple reliable methods
+    local bagshuiLoaded = false
+    
+    -- Method 1: Check for specific BagshuiBagsItem frames
+    for i = 1, 10 do -- Only need to check a few
+        if getglobal("BagshuiBagsItem" .. i) then
+            Debug("Detected BagshuiBagsItem" .. i)
+            bagshuiLoaded = true
+            break
+        end
+    end
+    
+    -- Method 2: Check for BagshuiBagsFrame (main container)
+    if not bagshuiLoaded and getglobal("BagshuiBagsFrame") then
+        Debug("Detected BagshuiBagsFrame")
+        bagshuiLoaded = true
+    end
+    
+    -- Method 3: Check for Bagshui global object
+    if not bagshuiLoaded and Bagshui and Bagshui.prototypes and Bagshui.prototypes.Inventory then
+        Debug("Detected Bagshui.prototypes.Inventory")
+        bagshuiLoaded = true
+    end
+    
+    -- Check if vPeddler is loaded and initialized
+    local vPeddlerLoaded = vPeddlerDB ~= nil
+    
+    if bagshuiLoaded and vPeddlerLoaded then
+        -- Both addons are loaded, initialize the module
+        NotifyLoaded()
+        Initialize()
+        return true
+    end
+    
+    return false
+end
+
+local function NotifyLoaded()
+    if vPeddlerDB and vPeddlerDB.verboseMode then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagshui compatibility loaded")
+    end
 end
 
 -- Debug settings
 local debugMode = false
-local function Debug(msg)
-    if not debugMode then return end
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler Bagshui:|r " .. msg)
-end
 
 -- Configuration
 local isInitialized = false
@@ -23,21 +60,23 @@ local markedButtons = {}
 
 -- Check if an item should be marked for vendor selling
 local function ShouldMarkItem(link)
-    if not link or not vPeddlerDB or not vPeddlerDB.enabled then return false end
+    if not link or not vPeddlerDB then return false end
+    
+    -- Check if addon is enabled - more permissive check
+    if vPeddlerDB.enabled == false then return false end
     
     -- Get item info
     local itemId = vPeddler_GetItemId(link)
     if not itemId then return false end
     
-    local _, _, quality = GetItemInfo(link)
-    
-    -- Quality check
-    if quality and vPeddlerDB.ignoreQuality and vPeddlerDB.ignoreQuality[quality] then
+    -- Manual flag check - this is the most important part
+    if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
         return true
     end
     
-    -- Manual flag check
-    if itemId and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
+    -- Quality check - keep this the same
+    local _, _, quality = GetItemInfo(link)
+    if quality and vPeddlerDB.ignoreQuality and vPeddlerDB.ignoreQuality[quality] then
         return true
     end
     
@@ -224,6 +263,11 @@ end
 
 -- Verify Bagshui button structure
 local function VerifyBagshuiButtons()
+    -- Only run this function in debug mode
+    if not debugMode then
+        return
+    end
+    
     DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Checking Bagshui button structure...")
     
     if not Bagshui then
@@ -274,6 +318,7 @@ local function TryInitialize(attempt)
     attempt = attempt or 1
     if attempt > 3 then return end
     
+    Debug("vPeddlerDB.enabled = " .. tostring(vPeddlerDB.enabled) .. ", flaggedItems count = " .. (vPeddlerDB.flaggedItems and table.getn(vPeddlerDB.flaggedItems) or "nil"))
     Debug("Initialization attempt #" .. attempt)
     
     local hookSuccess = HookBagshuiButtonUpdates()
@@ -365,7 +410,10 @@ local function TryInitialize(attempt)
         end)
     else
         DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagshui integration loaded successfully")
-        VerifyBagshuiButtons()
+        -- Only verify buttons in debug mode
+        if debugMode then
+            VerifyBagshuiButtons()
+        end
     end
     
     isInitialized = true
@@ -406,8 +454,3 @@ end)
 
 -- Variable to prevent multiple hook attempts
 local vPeddler_OnFlagItemHooked = false
-
--- Only show message if verboseMode is enabled
-if vPeddlerDB and vPeddlerDB.debug then
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagshui compatibility loaded")
-end
