@@ -37,9 +37,11 @@ add/remove any item in your inventory to your auto-sell list
 - **Interaction Options:**
   - Customizable modifier (Alt, Ctrl, Shift) for item flagging
   - Verbose mode showing what was added or removed from auto-sell list  
+<img src="https://github.com/user-attachments/assets/89996115-56d0-4bca-8601-caf5f6068899" float="right" align="right" width="320"> 
+
 >  - ~~Option for manual sell button instead of automatic selling~~  
 > WIP
-<img src="https://github.com/user-attachments/assets/89996115-56d0-4bca-8601-caf5f6068899" float="right" align="right" width="300"> 
+
 
 **Addon Compatibility**  
 - [x] Compatible with default bags  
@@ -52,7 +54,7 @@ add/remove any item in your inventory to your auto-sell list
 
 **Commands**
 
-- `/vp` or `/vpeddler` - Options Panel (contains all relevant options in a user-friendly GUI)
+- `/vp` or `/vpeddler` - Options Panel (user-friendly GUI)
 - `/vp reset` - Reset all settings to defaults
 - `/vp resetfilters` - Clear all manually flagged items
 - `/vp help` - Show help text
