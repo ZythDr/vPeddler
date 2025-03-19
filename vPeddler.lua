@@ -59,16 +59,37 @@ function vPeddler_InitDefaults(force)
         if vPeddlerDB.verboseMode == nil then vPeddlerDB.verboseMode = true end
     end
     
-    -- Standardize on autoFlagGrays with an 's'
+    -- Auto-Flag Grays sett
     if vPeddlerDB.autoFlagGrays == nil then 
-        vPeddlerDB.autoFlagGrays = true 
+        -- Check other variations and use their value if set
+        if vPeddlerDB.autoFlagGrey ~= nil then
+            vPeddlerDB.autoFlagGrays = vPeddlerDB.autoFlagGrey
+            vPeddlerDB.autoFlagGrey = nil  -- Clean up old variable
+        elseif vPeddlerDB.autoFlagGray ~= nil then
+            vPeddlerDB.autoFlagGrays = vPeddlerDB.autoFlagGray
+            vPeddlerDB.autoFlagGray = nil  -- Clean up old variable
+        else
+            vPeddlerDB.autoFlagGrays = true  -- Default value
+        end
     end
+    
+    -- Remove any legacy variables to avoid confusion
+    vPeddlerDB.autoFlagGrey = nil
+    vPeddlerDB.autoFlagGray = nil
     
     -- Add tracking table for auto-flagged items
     vPeddlerDB.autoFlaggedItems = vPeddlerDB.autoFlaggedItems or {}
     
     -- Ensure manuallyUnflagged table exists
     vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
+
+    -- Only set if not already set (using nil check instead of 'or' operator)
+    if vPeddlerDB.enabled == nil then vPeddlerDB.enabled = true end
+    if vPeddlerDB.autoRepair == nil then vPeddlerDB.autoRepair = true end
+    if vPeddlerDB.autoSell == nil then vPeddlerDB.autoSell = true end
+    if vPeddlerDB.autoFlagGrays == nil then vPeddlerDB.autoFlagGrays = true end
+    if vPeddlerDB.manualSellButton == nil then vPeddlerDB.manualSellButton = false end
+    if vPeddlerDB.verboseMode == nil then vPeddlerDB.verboseMode = true end
 end
 
 vPeddler.texturePool = {}

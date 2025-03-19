@@ -136,28 +136,30 @@ end
 
 -- Handle the various toggle functions
 function vPeddlerOptions_EnabledToggle()
-    vPeddlerDB.enabled = vPeddlerEnabledCheckbox:GetChecked();
+    local isChecked = vPeddlerEnabledCheckbox:GetChecked()
+    vPeddlerDB.enabled = (isChecked == 1)  -- Force boolean conversion
     DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Addon " .. (vPeddlerDB.enabled and "enabled" or "disabled"));
 end
 
 function vPeddlerOptions_AutoRepairToggle()
-    vPeddlerDB.autoRepair = vPeddlerAutoRepairCheckbox:GetChecked();
+    local isChecked = vPeddlerAutoRepairCheckbox:GetChecked()
+    vPeddlerDB.autoRepair = (isChecked == 1)  -- Force boolean conversion
 end
 
 function vPeddlerOptions_AutoSellToggle()
     local isChecked = vPeddlerAutoSellCheckbox:GetChecked()
-    vPeddlerDB.autoSell = isChecked
+    vPeddlerDB.autoSell = (isChecked == 1)  -- Force boolean conversion
     
     -- If enabling auto-sell, disable manual button
-    if isChecked then
+    if vPeddlerDB.autoSell then
         vPeddlerDB.manualSellButton = false
         vPeddlerManualSellButtonCheckbox:SetChecked(false)
     end
 end
 
 function vPeddlerOptions_AutoFlagGraysToggle()
-    -- Get the current state directly from the checkbox
-    vPeddlerDB.autoFlagGrays = vPeddlerAutoFlagGraysCheckbox:GetChecked()
+    local isChecked = vPeddlerAutoFlagGraysCheckbox:GetChecked()
+    vPeddlerDB.autoFlagGrays = (isChecked == 1)  -- Force boolean conversion
     
     if vPeddlerDB.autoFlagGrays then
         -- When enabled, flag all gray items
@@ -178,13 +180,18 @@ end
 
 function vPeddlerOptions_ManualSellButtonToggle()
     local isChecked = vPeddlerManualSellButtonCheckbox:GetChecked()
-    vPeddlerDB.manualSellButton = isChecked
+    vPeddlerDB.manualSellButton = (isChecked == 1)  -- Force boolean conversion
     
     -- If enabling manual button, disable auto-sell
-    if isChecked then
+    if vPeddlerDB.manualSellButton then
         vPeddlerDB.autoSell = false
         vPeddlerAutoSellCheckbox:SetChecked(false)
     end
+end
+
+function vPeddlerOptions_VerboseModeToggle()
+    local isChecked = vPeddlerVerboseModeCheckbox:GetChecked()
+    vPeddlerDB.verboseMode = (isChecked == 1)  -- Force boolean conversion
 end
 
 -- Slider handlers
@@ -399,12 +406,12 @@ function vPeddler_InitDefaults(force)
         vPeddlerDB.verboseMode = true 
     else
         -- Only set if not already set
-        vPeddlerDB.enabled = vPeddlerDB.enabled or true
-        vPeddlerDB.autoRepair = vPeddlerDB.autoRepair or true
-        vPeddlerDB.autoSell = vPeddlerDB.autoSell or true
-        vPeddlerDB.autoFlagGrays = vPeddlerDB.autoFlagGrays or true
-        vPeddlerDB.manualSellButton = vPeddlerDB.manualSellButton or false
-        vPeddlerDB.verboseMode = vPeddlerDB.verboseMode or true
+        if vPeddlerDB.enabled == nil then vPeddlerDB.enabled = true end
+        if vPeddlerDB.autoRepair == nil then vPeddlerDB.autoRepair = true end
+        if vPeddlerDB.autoSell == nil then vPeddlerDB.autoSell = true end
+        if vPeddlerDB.autoFlagGrays == nil then vPeddlerDB.autoFlagGrays = true end
+        if vPeddlerDB.manualSellButton == nil then vPeddlerDB.manualSellButton = false end
+        if vPeddlerDB.verboseMode == nil then vPeddlerDB.verboseMode = true end
     end
     
     -- Icon settings - always force these values when resetting
@@ -542,9 +549,4 @@ function vPeddlerOptions_OutlineToggle()
     vPeddlerDB.iconOutline = vPeddlerIconOutlineCheckbox:GetChecked();
     vPeddlerOptions_UpdatePreview();
     vPeddler_UpdateBagSlotMarkers();
-end
-
--- Add this handler for when the checkbox is clicked:
-function vPeddlerOptions_VerboseModeToggle()
-    vPeddlerDB.verboseMode = vPeddlerVerboseModeCheckbox:GetChecked();
 end
