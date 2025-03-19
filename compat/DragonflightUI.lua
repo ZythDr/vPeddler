@@ -1,9 +1,23 @@
 -- vPeddler compatibility module for Turtle-Dragonflight bags
+
 local _G = getfenv(0)
 
--- Only load if vPeddler exists
-local vPeddler = _G.vPeddler
-if not vPeddler then return end
+-- Check if addon is loaded - Simple direct approach
+if not IsAddOnLoaded("Turtle-Dragonflight") then
+    -- Only log this in debug mode to avoid unnecessary messages
+    if vPeddlerDB and vPeddlerDB.debug then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Turtle-Dragonflight not loaded, skipping module")
+    end
+    return
+end
+
+-- Check for vPeddler
+if not vPeddler then
+    return
+end
+
+
+local _G = getfenv(0)
 
 local module = {}
 vPeddler.compatModules = vPeddler.compatModules or {}
@@ -376,4 +390,7 @@ _G.VPEDDLER_TurtleBagTest = {
 -- Initialize
 module:Init()
 
-DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler:|r Turtle-Dragonflight bag module loaded")
+-- Only show message if verboseMode is enabled
+if vPeddlerDB and vPeddlerDB.debug then
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Turtle-Dragonflight module loaded")
+end

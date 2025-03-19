@@ -1,5 +1,15 @@
 -- vPeddler compatibility module for Bagshui
 
+-- Only load if Bagshui exists
+if not Bagshui then
+    return
+end
+
+-- Make sure vPeddler is also loaded
+if not vPeddlerDB then 
+    return 
+end
+
 -- Debug settings
 local debugMode = false
 local function Debug(msg)
@@ -396,3 +406,8 @@ end)
 
 -- Variable to prevent multiple hook attempts
 local vPeddler_OnFlagItemHooked = false
+
+-- Only show message if verboseMode is enabled
+if vPeddlerDB and vPeddlerDB.debug then
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagshui compatibility loaded")
+end

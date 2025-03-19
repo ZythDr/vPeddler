@@ -160,26 +160,20 @@ function vPeddlerOptions_AutoFlagGraysToggle()
     vPeddlerDB.autoFlagGrays = vPeddlerAutoFlagGraysCheckbox:GetChecked()
     
     if vPeddlerDB.autoFlagGrays then
-        -- WHEN CHECKED: Clear any existing flags on gray items so we start fresh
-        vPeddler_ClearAllGrayItemFlags()
-        
-        -- Then auto-flag all gray items (except manually unflagged ones)
-        vPeddler_AutoFlagGrayItems(true)
+        -- When enabled, flag all gray items
+        local flaggedCount = vPeddler_AutoFlagGrayItems()
         
         if vPeddlerDB.verboseMode then
             DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flag gray items enabled")
         end
     else
-        -- WHEN UNCHECKED: Clear all gray item flags
-        vPeddler_ClearAllGrayItemFlags()
+        -- When disabled, clear only the auto-flagged items
+        local unflaggedCount = vPeddler_ClearAutoFlaggedItems()
         
         if vPeddlerDB.verboseMode then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flag gray items disabled, gray items unflagged")
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flag gray items disabled. Unflagged " .. unflaggedCount .. " items.")
         end
     end
-    
-    -- Update the bag displays
-    vPeddler_UpdateBagSlotMarkers()
 end
 
 function vPeddlerOptions_ManualSellButtonToggle()
@@ -451,20 +445,6 @@ function vPeddler_InitDefaults(force)
     
     -- Debug mode
     vPeddlerDB.debug = vPeddlerDB.debug or false
-end
-
--- Auto-add gray quality items to sell list
-function vPeddlerOptions_AutoFlagGraysToggle()
-    -- Get the current state directly from the checkbox
-    vPeddlerDB.autoFlagGrays = vPeddlerAutoFlagGraysCheckbox:GetChecked()
-    
-    -- If enabled, immediately auto-flag any gray items
-    if vPeddlerDB.autoFlagGrays then
-        if vPeddlerDB.verboseMode then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flagging gray items...")
-        end
-        vPeddler_AutoFlagGrayItems()
-    end
 end
 
 -- Update the vPeddler.lua file to implement these new settings

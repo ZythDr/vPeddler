@@ -1,23 +1,56 @@
 -- vPeddler compatibility module for Bagnon (Vanilla 1.12.1)
--- Adds vendor trash icons to Bagnon bag slots
 
+local _G = getfenv(0)
 local debugMode = false
-
--- Helper function for debug messages
-local function Debug(msg)
-    if debugMode then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler Bagnon:|r " .. msg)
-    end
-end
-
--- Core configuration
-local activeMonitoring = true
-local updateThrottle = 0.25  -- Normal update throttle: 250ms
-local fastUpdateThrottle = 0.1  -- Fast update throttle: 100ms
-local currentThrottle = updateThrottle
-local lastUpdateTime = 0
-local fastUpdateEndTime = 0  -- When to end fast update mode
+local bagnonLoaded = false
 local hookHandlers = {}
+
+-- Delayed initialization frame
+local initFrame = CreateFrame("Frame")
+initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+initFrame:SetScript("OnEvent", function()
+    -- Remove the event so this only runs once
+    this:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    
+    -- Wait briefly after login
+    local timer = CreateFrame("Frame")
+    timer:SetScript("OnUpdate", function()
+        this.elapsed = (this.elapsed or 0) + arg1
+        if this.elapsed < 1 then return end
+        this:SetScript("OnUpdate", nil)
+        
+        -- Simple check for Bagnon - either the addon or the UI elements
+        local isBagnonPresent = IsAddOnLoaded("Bagnon_Core") or 
+                                IsAddOnLoaded("Bagnon") or
+                                (_G["BagnonItem1"] ~= nil)
+        
+        if not isBagnonPresent then
+            if vPeddlerDB and vPeddlerDB.debug then
+                DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagnon not detected")
+            end
+            return
+        end
+        
+        -- Mark as loaded
+        bagnonLoaded = true
+        
+        -- Show loading message
+        if vPeddlerDB and vPeddlerDB.verboseMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagnon integration loaded")
+        end
+        
+        -- Initialize variables
+        activeMonitoring = true
+        updateThrottle = 0.25
+        fastUpdateThrottle = 0.1
+        currentThrottle = updateThrottle
+        lastUpdateTime = 0
+        fastUpdateEndTime = 0
+        
+        -- Initialize the module
+        Initialize()
+    end)
+end)
 
 -- Get itemInfo (bag, slot, link) from a Bagnon button
 local function GetBagnonItemInfo(button)
@@ -50,12 +83,6 @@ local function ShouldMarkAsVendor(link)
     
     -- Check if manually flagged
     if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
-        return true
-    end
-    
-    -- Check quality based auto-flagging
-    local _, _, quality = GetItemInfo(link)
-    if quality and vPeddlerDB.ignoreQuality and vPeddlerDB.ignoreQuality[quality] then
         return true
     end
     
@@ -155,7 +182,7 @@ local function UpdateButtonMark(button)
 end
 
 -- Process all the BagnonItem buttons
-local function UpdateAllBagnonButtons()
+function UpdateAllBagnonButtons()
     local buttonCount = 0
     local markedCount = 0
     local changedCount = 0
@@ -187,7 +214,7 @@ local function UpdateAllBagnonButtons()
 end
 
 -- Temporarily enable fast update mode
-local function EnableFastUpdateMode(duration)
+function EnableFastUpdateMode(duration)
     duration = duration or 1.0  -- Default to 1 second of fast updates
     fastUpdateEndTime = GetTime() + duration
     currentThrottle = fastUpdateThrottle
@@ -195,7 +222,7 @@ local function EnableFastUpdateMode(duration)
 end
 
 -- Check if any buttons need updating due to changes
-local function CheckForButtonUpdates()
+function CheckForButtonUpdates()
     -- Check if fast update mode should end
     if fastUpdateEndTime > 0 and GetTime() > fastUpdateEndTime then
         fastUpdateEndTime = 0
@@ -213,7 +240,7 @@ local function CheckForButtonUpdates()
 end
 
 -- Update all button appearance settings including position
-local function UpdateButtonAppearance()
+function UpdateButtonAppearance()
     -- Process all BagnonItem buttons
     for i = 1, 120 do
         local buttonName = "BagnonItem" .. i
@@ -255,7 +282,7 @@ local function UpdateButtonAppearance()
 end
 
 -- Create the active monitoring system
-local function SetupActiveMonitoring()
+function SetupActiveMonitoring()
     local monitorFrame = CreateFrame("Frame")
     local elapsed = 0
     
@@ -270,7 +297,7 @@ local function SetupActiveMonitoring()
 end
 
 -- Hook into vPeddler settings changes
-local function HookIntovPeddler()
+function HookIntovPeddler()
     -- Hook option setter
     if not hookHandlers.vPeddlerOptions and vPeddler.OnOptionSet then
         local origOnOptionSet = vPeddler.OnOptionSet
@@ -365,7 +392,7 @@ local function HookIntovPeddler()
 end
 
 -- Set up event monitoring
-local function SetupEventMonitoring()
+function SetupEventMonitoring()
     local eventFrame = CreateFrame("Frame")
     
     eventFrame:RegisterEvent("BAG_UPDATE")
@@ -383,8 +410,15 @@ local function SetupEventMonitoring()
     end)
 end
 
+-- Helper function for debug messages
+local function Debug(msg)
+    if debugMode then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler Bagnon:|r " .. msg)
+    end
+end
+
 -- Initialize the module
-local function Initialize()
+function Initialize()
     -- Set up hooks and monitoring
     HookIntovPeddler()
     SetupEventMonitoring()
@@ -397,44 +431,8 @@ local function Initialize()
     -- Force initial update
     lastUpdateTime = 0
     
-    -- Add chat message
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagnon integration loaded")
-end
-
--- Add debug commands
-SLASH_VPB1 = "/vpb"
-SlashCmdList["VPB"] = function(msg)
-    if msg == "debug" then
-        debugMode = not debugMode
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagnon debug mode " .. (debugMode and "enabled" or "disabled"))
-    elseif msg == "update" then
-        lastUpdateTime = 0
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Forced update of Bagnon buttons")
-    elseif msg == "hooks" then
-        local count = 0
-        for name, _ in pairs(hookHandlers) do
-            count = count + 1
-        end
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: " .. count .. " hooks active")
-    else
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Bagnon commands")
-        DEFAULT_CHAT_FRAME:AddMessage("  /vpb debug - Toggle debug mode")
-        DEFAULT_CHAT_FRAME:AddMessage("  /vpb update - Force button update")
-        DEFAULT_CHAT_FRAME:AddMessage("  /vpb hooks - Show hook count")
+    -- Use conditional message instead of Debug function
+    if debugMode then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler Bagnon:|r Module initialized!")
     end
-end
-
--- Load on startup if Bagnon is already loaded
-if IsAddOnLoaded("Bagnon") or IsAddOnLoaded("Bagnon_Core") then
-    Initialize()
-else
-    -- Wait for Bagnon to load
-    local loadWatcher = CreateFrame("Frame")
-    loadWatcher:RegisterEvent("ADDON_LOADED")
-    loadWatcher:SetScript("OnEvent", function()
-        if arg1 == "Bagnon" or arg1 == "Bagnon_Core" then
-            Debug("Bagnon loaded, initializing...")
-            Initialize()
-        end
-    end)
 end
