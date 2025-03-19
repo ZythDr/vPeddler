@@ -39,7 +39,7 @@ add/remove any item in your inventory to your auto-sell list
   - Verbose mode showing what was added or removed from auto-sell list  
 >  - ~~Option for manual sell button instead of automatic selling~~  
 > WIP
-<img src="https://github.com/user-attachments/assets/89996115-56d0-4bca-8601-caf5f6068899" float="right" align="right" width="320"> 
+<img src="https://github.com/user-attachments/assets/89996115-56d0-4bca-8601-caf5f6068899" float="right" align="right" width="310"> 
 
 **Addon Compatibility**  
 - [x] Compatible with default bags  
