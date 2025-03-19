@@ -12,10 +12,10 @@ A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life fea
 <img src="https://github.com/user-attachments/assets/11d22488-e91b-46e9-9f8d-0b0bdaf89215" float="right" align="right" width="220" >  
 
 - **Auto-Sell:** Automatically sells any flagged items when visiting vendors
-- **Visual Indicators:** Marks auto-sell items in your bags with customizable coin icons
-- **Manual Item Flagging:** Right-click with modifier key to manually add/remove any item in  
-your inventory to your auto-sell list
-- **Auto-flag Gray Items:** By default, vPeddler automatically flags gray items to auto-sell list
+- **Visual Indicators:** Displays Auto-Sell items with coin icon markers
+- **Manual Item Flagging:** Right-click with modifier key to manually add/remove any  
+item in your inventory to your auto-sell list
+- **Auto-flag Gray Items:** Automatically add gray items to auto-sell list
 > - **Full Quality-Based Filters:** Select which item quality levels  
 (Poor, Common, Uncommon, etc.) should be automatically sold  
 > <sup>WIP, not yet implemented, may come as a separate plugin for vPeddler instead</sup>
