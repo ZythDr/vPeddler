@@ -13,8 +13,8 @@ A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life fea
 
 - **Auto-Sell:** Automatically sells any flagged items when visiting vendors
 - **Visual Indicators:** Displays Auto-Sell items with coin icon markers
-- **Manual Item Flagging:** Right-click with modifier key to manually add/remove any  
-item in your inventory to your auto-sell list
+- **Manual Item Flagging:** Right-click with modifier key to manually  
+add/remove any item in your inventory to your auto-sell list
 - **Auto-flag Gray Items:** Automatically add gray items to auto-sell list
 > - **Full Quality-Based Filters:** Select which item quality levels  
 (Poor, Common, Uncommon, etc.) should be automatically sold  
