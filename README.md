@@ -41,13 +41,13 @@ add/remove any item in your inventory to your auto-sell list
 <img src="https://github.com/user-attachments/assets/89996115-56d0-4bca-8601-caf5f6068899" float="right" align="right" width="310"> 
 
 **Addon Compatibility**  
-- [x] Compatible with default bags  
-- [x] Compatible with Bagshui (req changing modifier in /vp)
-- [x] Compatible with Bagnon  
-- [x] Compatible with EngBags  
-- [x] Compatible with pfUI bags  
-- [x] Compatible with SUCC-bag  
-- [x] Compatible with Turtle-Dragonflight/tDF UI  
+- [x] Blizzard bags  
+- [x] Bagshui (req ctrl/shift modifier, change in /vp)
+- [x] Bagnon  
+- [x] EngBags  
+- [x] pfUI bags  
+- [x] SUCC-bag  
+- [x] Turtle-Dragonflight/tDF UI  
 
 **Commands**
 
