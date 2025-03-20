@@ -42,7 +42,7 @@ add/remove any item in your inventory to your auto-sell list
 
 **Addon Compatibility**  
 - [x] Compatible with default bags  
-- [x] Compatible with Bagshui  
+- [x] Compatible with Bagshui (req changing modifier in /vp)
 - [x] Compatible with Bagnon  
 - [x] Compatible with EngBags  
 - [x] Compatible with pfUI bags  
