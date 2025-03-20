@@ -1,7 +1,6 @@
 # vPeddler - Peddler for Vanilla WoW 1.12
 
-A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life features and usage. <br />
-<br />
+A relatively sophisticated junk seller addon that focuses on Qaulity-of-Life features and ease of use.
 
 ## Usage
 
@@ -58,7 +57,7 @@ add/remove any item in your inventory to your auto-sell list
 - `/vp help` - Show help text
 
 ### To-Do:
-- [ ] Make the addon truly modular by breaking modules out into separate addons.
+- [ ] Make the addon truly modular by breaking modules out into separate addons
 - [ ] Add support for items that cannot be sold to vendors (Delete unwanted items at vendor)
 - [ ] Implement a manual sell button for paranoid players
 - [ ] Create a separate plugin to add remaining features found in the original Peddler addon
