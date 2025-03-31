@@ -254,6 +254,41 @@ local function UpdateAllButtons()
         end
     end
     
+    -- Also check for BagshuiBankItem frames
+    for i = 1, 200 do  -- Bank typically has fewer slots than bags
+        -- Try both possible naming conventions
+        local button = getglobal("BagshuiBankItem" .. i) or getglobal("BagshuiBagsItem" .. i)
+        if button and button:IsVisible() then
+            totalButtons = totalButtons + 1
+            Debug("Found visible bank button: " .. button:GetName())
+            
+            -- Bank buttons may use different data structure - handle both possibilities
+            local hasItem = false
+            local itemLink = nil
+            
+            if button.bagshuiData and button.bagshuiData.item and button.bagshuiData.item.itemLink then
+                hasItem = true
+                itemLink = button.bagshuiData.item.itemLink
+            elseif button.bankData and button.bankData.item and button.bankData.item.itemLink then
+                hasItem = true
+                itemLink = button.bankData.item.itemLink
+            end
+            
+            if hasItem and itemLink then
+                Debug("Bank button has item: " .. itemLink)
+                if ShouldMarkItem(itemLink) then
+                    MarkButton(button)
+                    markedCount = markedCount + 1
+                else
+                    HideButtonMark(button)
+                end
+            else
+                Debug("Bank button has no item")
+                HideButtonMark(button)
+            end
+        end
+    end
+    
     Debug("Updated " .. markedCount .. " buttons out of " .. totalButtons .. " visible")
     -- Only show this message when debug mode is enabled
     if debugMode then
@@ -313,6 +348,42 @@ local function VerifyBagshuiButtons()
                                  visibleButtons .. " visible, " .. buttonsWithItems .. " with items")
 end
 
+-- Add this helper function to forcibly clean all bank slot icons
+local function CleanupBankIcons()
+    Debug("Performing bank icon cleanup")
+    
+    -- First attempt - using BagshuiBankItem naming convention
+    local bankCleanCount = 0
+    for i = 1, 200 do
+        local button = getglobal("BagshuiBankItem" .. i)
+        if button then
+            -- Force hide the icon regardless of what the button contains
+            if button.vPeddlerVendorFrame then
+                button.vPeddlerVendorFrame:Hide()
+                bankCleanCount = bankCleanCount + 1
+            end
+        end
+    end
+    
+    -- Second attempt - check all bag buttons for possible bank usage
+    for i = 1, 500 do
+        local button = getglobal("BagshuiBagsItem" .. i)
+        if button then
+            -- If this is a bank button (typically has a different parent)
+            local parent = button:GetParent()
+            if parent and parent:GetName() and string.find(parent:GetName(), "Bank") then
+                if button.vPeddlerVendorFrame then
+                    button.vPeddlerVendorFrame:Hide()
+                    bankCleanCount = bankCleanCount + 1
+                end
+            end
+        end
+    end
+    
+    Debug("Bank cleanup removed " .. bankCleanCount .. " lingering icons")
+    return bankCleanCount
+end
+
 -- Initialize module with several retries
 local function TryInitialize(attempt)
     attempt = attempt or 1
@@ -351,9 +422,37 @@ local function TryInitialize(attempt)
     eventFrame:RegisterEvent("BAG_UPDATE")
     eventFrame:RegisterEvent("MERCHANT_SHOW")
     eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    eventFrame:RegisterEvent("BANKFRAME_OPENED")
+    eventFrame:RegisterEvent("BANKFRAME_CLOSED")
+    eventFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
     
+    -- Modify your event handler to include a special bank cleanup
     eventFrame:SetScript("OnEvent", function()
         Debug("Event triggered: " .. event)
+        
+        -- If it's a bank-specific event, use special handling
+        if event == "PLAYERBANKSLOTS_CHANGED" or event == "BANKFRAME_OPENED" or event == "BANKFRAME_CLOSED" then
+            Debug("Bank event - special handling")
+            
+            -- First clean up all bank icons
+            CleanupBankIcons()
+            
+            -- Then wait a moment and do a full update
+            local timer = CreateFrame("Frame")
+            local elapsed = 0
+            timer:SetScript("OnUpdate", function()
+                elapsed = elapsed + arg1
+                if elapsed >= 0.2 then
+                    UpdateAllButtons()
+                    -- Do another cleanup pass after updating
+                    CleanupBankIcons()
+                    timer:SetScript("OnUpdate", nil)
+                end
+            end)
+            return
+        end
+        
+        -- For regular events, use the existing throttling mechanism
         local timer = CreateFrame("Frame")
         local elapsed = 0
         timer:SetScript("OnUpdate", function()
