@@ -1,72 +1,5 @@
--- vPeddler compatibility module for pfUI (Vanilla 1.12.1)
-
+-- vPeddler compatibility module for pfUI
 local _G = getfenv(0)
-local debugMode = false
-
--- Check if higher priority bag addons are loaded first
-local function CheckForPriorityAddons()
-    -- List of addons that take priority over pfUI
-    local priorityAddons = {
-        -- Format: [addon name] = {load check function, display name}
-        ["SUCC-bag"] = {
-            function() 
-                return IsAddOnLoaded("SUCC-bag") or
-                       IsAddOnLoaded("SUCC-Bag") or
-                       (_G["SUCC_bag"] ~= nil)
-            end,
-            "SUCC-bag"
-        },
-        ["EngBags"] = {
-            function() 
-                return IsAddOnLoaded("EngBags") or
-                       (_G["EngInventory_frame"] ~= nil)
-            end,
-            "EngBags"
-        },
-        ["Bagnon"] = {
-            function() 
-                return IsAddOnLoaded("Bagnon_Core") or
-                       IsAddOnLoaded("Bagnon") or
-                       (_G["BagnonItem1"] ~= nil)
-            end,
-            "Bagnon"
-        },
-        ["BagShui"] = {
-            function() 
-                return IsAddOnLoaded("BagShui") or
-                       (_G["BagShuiBag1"] ~= nil)
-            end,
-            "BagShui"
-        }
-    }
-    
-    -- Check each priority addon
-    for addonKey, addonData in pairs(priorityAddons) do
-        local checkFunc = addonData[1]
-        local displayName = addonData[2]
-        
-        -- If the addon is loaded, return its name
-        if checkFunc() then
-            return displayName
-        end
-    end
-    
-    -- No priority addons found
-    return nil
-end
-
--- Check if pfUI is loaded
-local function IsPfUILoaded()
-    -- Try multiple detection methods
-    if IsAddOnLoaded("pfUI") then return true end
-    if _G["pfUI"] ~= nil then return true end
-    
-    -- Check for key pfUI frames/components
-    if _G["pfBag1"] ~= nil then return true end
-    if _G["pfContainer"] ~= nil then return true end
-    
-    return false
-end
 
 -- Create a frame to delay initialization until after all addons are loaded
 local initFrame = CreateFrame("Frame")
@@ -75,40 +8,27 @@ initFrame:SetScript("OnEvent", function()
     -- Remove the event so this only runs once
     this:UnregisterEvent("PLAYER_ENTERING_WORLD")
     
-    -- Wait briefly after login
+    -- Wait 1 second after login for all addons to fully initialize
     local timer = CreateFrame("Frame")
     timer:SetScript("OnUpdate", function()
         this.elapsed = (this.elapsed or 0) + arg1
         if this.elapsed < 1 then return end
         this:SetScript("OnUpdate", nil)
         
-        -- First check if a higher priority addon is loaded
-        local priorityAddon = CheckForPriorityAddons()
-        if priorityAddon then
+        -- Check if pfUI addon is loaded
+        if not IsAddOnLoaded("pfUI") then
             if vPeddlerDB and vPeddlerDB.debug then
-                DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: " .. priorityAddon .. 
-                                             " detected, skipping pfUI integration")
+                DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: pfUI addon not detected, module not loaded")
             end
             return
         end
         
-        -- Now check if pfUI is loaded
-        if not IsPfUILoaded() then
-            if vPeddlerDB and vPeddlerDB.debug then
-                DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: pfUI not detected")
-            end
-            return
-        end
-        
-        -- Show loading message
-        if vPeddlerDB and vPeddlerDB.verboseMode then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: pfUI integration loaded")
+        if vPeddlerDB and vPeddlerDB.debug then
+            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: pfUI module loaded")
         end
         
         -- Make sure vPeddler is loaded
-        if not vPeddlerDB then 
-            return 
-        end
+        if not vPeddlerDB then return end
 
         local vPeddler = _G.vPeddler
         if not vPeddler then return end
@@ -118,435 +38,424 @@ initFrame:SetScript("OnEvent", function()
         vPeddler.compatModules = vPeddler.compatModules or {}
         vPeddler.compatModules["pfUI"] = module
 
-        -- Continue with rest of module initialization
-        -- Enhanced implementation that adds vendor icons to pfUI bag slots
+        -- Module configuration
+        local debugMode = vPeddlerDB.debug or false
+        local updateThrottle = 0.5  -- Update every 0.5 seconds
+        local elapsedTime = 0
+        local buttonCache = {}      -- Cache of hooked buttons
 
-        local addonName = "vPeddler pfUI"
-        local updateDelay = 0.2 -- Update interval in seconds
-        local nextUpdateTime = 0
-        local pendingUpdate = false
-        local iconCache = {} -- Cache to track icon state
-
-        -- Simple debug function
+        -- Debug function
         local function Debug(msg)
-            if not debugMode then return end
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33" .. addonName .. ":|r " .. msg)
+            if debugMode then
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r " .. msg)
+            end
         end
 
-        -- Enhanced version of ForceFullIconRefresh with better texture handling
-        local function ForceFullIconRefresh()
-            -- Mark for update
-            iconCache = {}
-            pendingUpdate = true
-            nextUpdateTime = 0
+        -- Get item ID from link
+        local function GetItemId(link)
+            if not link then return nil end
             
-            -- Debug current settings
-            if debugMode and vPeddlerDB then
-                Debug("Current settings - Texture: " .. tostring(vPeddlerDB.iconTexture) .. 
-                    ", Outline: " .. tostring(vPeddlerDB.iconOutline) ..
-                    ", Size: " .. tostring(vPeddlerDB.iconSize))
+            local _, _, id = string.find(link, "item:(%d+):")
+            if not id then
+                _, _, id = string.find(link, "item:(%d+)")
             end
+            if not id then return nil end
             
-            -- Update existing icons immediately
-            if pfUI and pfUI.bag then
-                for bagID = 0, 4 do
-                    local numSlots = GetContainerNumSlots(bagID)
-                    for slotID = 1, numSlots do
-                        local buttonName = "pfBag" .. bagID .. "item" .. slotID
-                        local button = getglobal(buttonName)
-                        
-                        if button and button.vPeddlerFrame and button.vPeddlerIcon then
-                            -- Update existing icons' appearance regardless of whether item should be marked
-                            local position = vPeddlerDB and vPeddlerDB.iconPosition or "BOTTOMLEFT"
-                            local size = vPeddlerDB and vPeddlerDB.iconSize or 16
-                            local alpha = vPeddlerDB and vPeddlerDB.iconAlpha or 1.0
-                            
-                            button.vPeddlerFrame:ClearAllPoints()
-                            button.vPeddlerFrame:SetPoint(position, button, position, 0, 0)
-                            button.vPeddlerFrame:SetWidth(size)
-                            button.vPeddlerFrame:SetHeight(size)
-                            
-                            -- Improved texture path calculation
-                            local texturePath = "Interface\\Icons\\INV_Misc_Coin_01"
-                            if vPeddlerDB and vPeddlerDB.iconTexture == "coins" then
-                                local textureSize = size >= 36 and "64" or (size >= 23 and "32" or "16")
-                                local outlinePrefix = ""
-                                
-                                if vPeddlerDB.iconOutline then
-                                    outlinePrefix = "outline_"
-                                end
-                                
-                                texturePath = "Interface\\AddOns\\vPeddler\\textures\\Peddler_" .. 
-                                    outlinePrefix .. textureSize .. ".tga"
-                                    
-                                if debugMode then
-                                    Debug("Setting texture path: " .. texturePath)
-                                end
-                            end
-                            
-                            button.vPeddlerIcon:SetTexture(texturePath)
-                            button.vPeddlerIcon:SetAlpha(alpha)
-                        end
-                    end
-                end
-            end
-            
-            Debug("Forcing complete icon refresh with appearance update")
+            return tonumber(id)
         end
 
-        -- Check if an item should be marked for vendor selling
-        local function ShouldMarkItem(link)
-            if not link or not vPeddlerDB or not vPeddlerDB.enabled then return false end
+        -- Function to check if an item should be sold
+        local function ShouldSellItem(link)
+            if not link or not vPeddlerDB or not vPeddlerDB.enabled then 
+                return false 
+            end
             
-            local itemId = vPeddler_GetItemId(link)
+            local itemId = GetItemId(link)
             if not itemId then return false end
             
-            itemId = tonumber(itemId)
-            
-            -- Check if item is specifically flagged
+            -- Check if manually flagged
             if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
                 return true
             end
             
-            -- Quality-based auto-selling
+            -- Check if gray quality and should be sold
             local _, _, quality = GetItemInfo(link)
-            if quality and vPeddlerDB.ignoreQuality and vPeddlerDB.ignoreQuality[quality] then
+            if quality == 0 and vPeddlerDB.autoFlagGrays then
                 return true
             end
             
             return false
         end
 
-        -- Create or update vendor badge on a button
-        local function UpdateButtonIcon(button, show)
-            if not button or not button:GetName() then return end
+        -- Parse bag and slot from button name
+        local function ParseButtonInfo(button)
+            if not button or not button:GetName() then return nil, nil end
             
-            -- Create frame for our icon if it doesn't exist
-            if not button.vPeddlerFrame then
-                local frameName = button:GetName() .. "VendorIcon"
-                button.vPeddlerFrame = CreateFrame("Frame", frameName, button)
-                button.vPeddlerIcon = button.vPeddlerFrame:CreateTexture(frameName .. "Texture", "OVERLAY")
-                button.vPeddlerIcon:SetAllPoints(button.vPeddlerFrame)
-            end
+            local name = button:GetName()
+            local bagID, slotID
             
-            -- Store current state in cache
-            iconCache[button:GetName()] = show
-            
-            -- Hide if not showing
-            if not show then
-                button.vPeddlerFrame:Hide()
-                return
-            end
-            
-            -- Update position based on settings
-            local position = vPeddlerDB and vPeddlerDB.iconPosition or "BOTTOMLEFT"
-            local size = vPeddlerDB and vPeddlerDB.iconSize or 16
-            local alpha = vPeddlerDB and vPeddlerDB.iconAlpha or 1.0
-            
-            button.vPeddlerFrame:ClearAllPoints()
-            button.vPeddlerFrame:SetPoint(position, button, position, 0, 0)
-            button.vPeddlerFrame:SetWidth(size)
-            button.vPeddlerFrame:SetHeight(size)
-            
-            -- Update texture based on settings
-            local texturePath = "Interface\\Icons\\INV_Misc_Coin_01"
-            if vPeddlerDB and vPeddlerDB.iconTexture == "coins" then
-                local textureSize = size >= 36 and "64" or (size >= 23 and "32" or "16")
-                texturePath = "Interface\\AddOns\\vPeddler\\textures\\Peddler_" .. 
-                    (vPeddlerDB.iconOutline and "outline_" or "") .. textureSize .. ".tga"
-            end
-            
-            button.vPeddlerIcon:SetTexture(texturePath)
-            button.vPeddlerIcon:SetAlpha(alpha)
-            
-            -- Show the icon
-            button.vPeddlerFrame:Show()
-        end
-
-        -- Schedule an update to occur on the next update tick
-        local function ScheduleUpdate()
-            pendingUpdate = true
-        end
-
-        -- Process the update if it's time
-        local function ProcessUpdate()
-            local currentTime = GetTime()
-            
-            -- Only update if enough time has passed since the last update
-            if currentTime < nextUpdateTime then
-                return
-            end
-            
-            -- Reset flags
-            pendingUpdate = false
-            nextUpdateTime = currentTime + updateDelay
-            
-            -- Only update if pfUI is loaded
-            if not pfUI or not pfUI.bag then return end
-            
-            local count = 0
-            local changed = 0
-            
-            -- Loop through bags and slots
-            for bagID = 0, 4 do
-                local numSlots = GetContainerNumSlots(bagID)
-                for slotID = 1, numSlots do
-                    local buttonName = "pfBag" .. bagID .. "item" .. slotID
-                    local button = getglobal(buttonName)
-                    
-                    if button then
-                        local link = GetContainerItemLink(bagID, slotID)
-                        local shouldMark = link and ShouldMarkItem(link) or false
-                        
-                        -- Check if state has changed
-                        if iconCache[buttonName] ~= shouldMark then
-                            UpdateButtonIcon(button, shouldMark)
-                            changed = changed + 1
-                        end
-                        
-                        if shouldMark then
-                            count = count + 1
-                        end
-                    end
+            -- Handle main bank format (pfBag-1item#)
+            if string.find(name, "pfBag%-1") then
+                bagID = -1
+                local _, _, id = string.find(name, "item(%d+)")
+                slotID = id and tonumber(id)
+            else
+                -- Handle regular bag format (pfBag#item#)
+                local _, _, bagMatch = string.find(name, "pfBag(%d+)")
+                if bagMatch then
+                    bagID = tonumber(bagMatch)
+                    local _, _, id = string.find(name, "item(%d+)")
+                    slotID = id and tonumber(id)
                 end
             end
             
-            if changed > 0 then
-                Debug("Updated " .. count .. " buttons with icons (" .. changed .. " changed)")
-            end
+            return bagID, slotID
         end
-
-        -- Hook into vPeddler settings changes
-        local function HookVPeddlerSettings()
-            -- Only hook once
-            if vPeddler.pfui_settings_hooked then return end
+        
+        -- Process item flagging/unflagging
+        local function ProcessVPeddlerItemClick(link)
+            if not link then return end
             
-            -- Hook into OnOptionSet (this is the key function for all settings changes)
-            if vPeddler.OnOptionSet then
-                local originalOptionSet = vPeddler.OnOptionSet
-                vPeddler.OnOptionSet = function(option, value)
-                    -- Call original function
-                    originalOptionSet(option, value)
-                    
-                    Debug("Option changed: " .. option .. " - Refreshing icons")
-                    ForceFullIconRefresh()
-                end
-                vPeddler.pfui_settings_hooked = true
-                Debug("Successfully hooked vPeddler settings")
-            end
+            local itemId = GetItemId(link)
+            if not itemId then return end
             
-            -- Hook slash command to catch GUI interactions
-            if SlashCmdList["VPEDDLER"] then
-                local originalCmd = SlashCmdList["VPEDDLER"]
-                SlashCmdList["VPEDDLER"] = function(msg)
-                    originalCmd(msg)
-                    
-                    -- Short delay to allow GUI to update settings
-                    local timer = CreateFrame("Frame")
-                    local waiting = 0
-                    timer:SetScript("OnUpdate", function()
-                        waiting = waiting + arg1
-                        if waiting > 0.1 then
-                            ForceFullIconRefresh()
-                            timer:SetScript("OnUpdate", nil)
-                        end
-                    end)
-                end
-                Debug("Successfully hooked slash command")
-            end
-        end
-
-        -- More comprehensive hooks into vPeddler flagging functions
-        local function HookVPeddlerFunctions()
-            if not vPeddler then return end
+            -- Toggle flag status
+            vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
             
-            -- Hook AddItemToSellList
-            if vPeddler.AddItemToSellList and not vPeddler.pfui_add_hooked then
-                local originalAdd = vPeddler.AddItemToSellList
-                vPeddler.AddItemToSellList = function(self, itemId)
-                    originalAdd(self, itemId)
-                    Debug("Item " .. itemId .. " added to sell list")
-                    ForceFullIconRefresh() -- Force a full refresh instead of just scheduling
-                end
-                vPeddler.pfui_add_hooked = true
-                Debug("Successfully hooked AddItemToSellList")
-            end
-            
-            -- Hook RemoveItemFromSellList
-            if vPeddler.RemoveItemFromSellList and not vPeddler.pfui_remove_hooked then
-                local originalRemove = vPeddler.RemoveItemFromSellList
-                vPeddler.RemoveItemFromSellList = function(self, itemId)
-                    originalRemove(self, itemId)
-                    Debug("Item " .. itemId .. " removed from sell list")
-                    ForceFullIconRefresh() -- Force a full refresh instead of just scheduling
-                end
-                vPeddler.pfui_remove_hooked = true
-                Debug("Successfully hooked RemoveItemFromSellList")
-            end
-            
-            -- Hook ToggleItemFlag which is often used by UI actions
-            if vPeddler.ToggleItemFlag and not vPeddler.pfui_toggle_hooked then
-                local originalToggle = vPeddler.ToggleItemFlag
-                vPeddler.ToggleItemFlag = function(self, itemId)
-                    originalToggle(self, itemId)
-                    Debug("Item flag toggled for " .. itemId)
-                    ForceFullIconRefresh() -- Force a full refresh
-                end
-                vPeddler.pfui_toggle_hooked = true
-                Debug("Successfully hooked ToggleItemFlag")
-            end
-        end
-
-        -- Hook into vPeddler's slider controls directly
-        local function HookVPeddlerSliders()
-            -- Only hook once
-            if vPeddler.pfui_sliders_hooked then return end
-            
-            -- Try to find the icon size slider
-            local iconSizeSlider = getglobal("vPeddlerIconSizeSlider")
-            if iconSizeSlider and iconSizeSlider:GetScript("OnValueChanged") then
-                local originalOnValueChanged = iconSizeSlider:GetScript("OnValueChanged")
-                iconSizeSlider:SetScript("OnValueChanged", function()
-                    -- Call original handler first
-                    originalOnValueChanged()
-                    
-                    -- Now update our icons with a slight delay to allow settings to save
-                    local sliderTimer = CreateFrame("Frame")
-                    local sliderWaiting = 0
-                    sliderTimer:SetScript("OnUpdate", function()
-                        sliderWaiting = sliderWaiting + arg1
-                        if sliderWaiting > 0.1 then
-                            Debug("Icon size changed - updating appearance")
-                            ForceFullIconRefresh()
-                            sliderTimer:SetScript("OnUpdate", nil)
-                        end
-                    end)
-                end)
-                Debug("Successfully hooked icon size slider")
-            end
-            
-            -- Try to find the icon alpha slider
-            local iconAlphaSlider = getglobal("vPeddlerIconAlphaSlider")
-            if iconAlphaSlider and iconAlphaSlider:GetScript("OnValueChanged") then
-                local originalAlphaChanged = iconAlphaSlider:GetScript("OnValueChanged")
-                iconAlphaSlider:SetScript("OnValueChanged", function()
-                    -- Call original handler first
-                    originalAlphaChanged()
-                    
-                    -- Now update our icons with a slight delay
-                    local alphaTimer = CreateFrame("Frame")
-                    local alphaWaiting = 0
-                    alphaTimer:SetScript("OnUpdate", function()
-                        alphaWaiting = alphaWaiting + arg1
-                        if alphaWaiting > 0.1 then
-                            Debug("Icon alpha changed - updating appearance")
-                            ForceFullIconRefresh()
-                            alphaTimer:SetScript("OnUpdate", nil)
-                        end
-                    end)
-                end)
-                Debug("Successfully hooked icon alpha slider")
-            end
-            
-            vPeddler.pfui_sliders_hooked = true
-        end
-
-        -- Hook the right-click handler that flags/unflags items
-        local function HookContainerRightClick()
-            -- Store original function if we haven't already
-            if not vPeddler.pfui_original_containerclick and ContainerFrameItemButton_OnClick then
-                vPeddler.pfui_original_containerclick = ContainerFrameItemButton_OnClick
+            if vPeddlerDB.flaggedItems[itemId] then
+                -- Item is currently flagged, unflag it
+                vPeddlerDB.flaggedItems[itemId] = nil
                 
-                -- Replace with our modified version
-                ContainerFrameItemButton_OnClick = function(button)
-                    local modifierDown = false
+                -- Output if verbose mode is enabled
+                if vPeddlerDB.verboseMode then
+                    local name = GetItemInfo(link)
+                    if name then
+                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed " .. name .. " from auto-sell list")
+                    end
+                end
+            else
+                -- Item is not flagged, flag it
+                vPeddlerDB.flaggedItems[itemId] = true
+                
+                -- Output if verbose mode is enabled
+                if vPeddlerDB.verboseMode then
+                    local name = GetItemInfo(link)
+                    if name then
+                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added " .. name .. " to auto-sell list")
+                    end
+                end
+            end
+            
+            -- Force an immediate update
+            module:UpdateAllButtons(true)
+        end
+
+        -- Scan for all pfUI buttons (bags and bank)
+        function module:FindButtons()
+            local foundCount = 0
+            
+            -- Look for all possible buttons in all containers
+            -- Player bags (0-4)
+            for bag = 0, 4 do
+                for slot = 1, 36 do -- pfUI supports up to 36 slots per bag
+                    local frameName = "pfBag" .. bag .. "item" .. slot
+                    local frame = _G[frameName]
+                    if frame then
+                        if not buttonCache[frame] then
+                            self:HookButton(frame)
+                            foundCount = foundCount + 1
+                        end
+                    end
+                end
+            end
+            
+            -- Bank main container (-1)
+            for slot = 1, 28 do
+                local frameName = "pfBag-1item" .. slot
+                local frame = _G[frameName]
+                if frame then
+                    if not buttonCache[frame] then
+                        self:HookButton(frame)
+                        foundCount = foundCount + 1
+                    end
+                end
+            end
+            
+            -- Bank bags (5-11)
+            for bag = 5, 11 do
+                for slot = 1, 36 do
+                    local frameName = "pfBag" .. bag .. "item" .. slot
+                    local frame = _G[frameName]
+                    if frame then
+                        if not buttonCache[frame] then
+                            self:HookButton(frame)
+                            foundCount = foundCount + 1
+                        end
+                    end
+                end
+            end
+            
+            if foundCount > 0 and debugMode then
+                Debug("Found " .. foundCount .. " new buttons")
+            end
+            
+            return foundCount
+        end
+
+        -- Hook a button with our click handler and prepare for icons
+        function module:HookButton(button)
+            if not button or buttonCache[button] then return end
+            
+            -- Create texture for vendor icon (using OVERLAY level 7 for highest visibility)
+            local tex = button:CreateTexture(nil, "OVERLAY", nil, 7)
+            button.vPeddlerTex = tex
+            tex:Hide()
+            
+            -- Apply texture visually
+            tex:SetTexture("Interface\\AddOns\\vPeddler\\textures\\Peddler_16.tga")
+            tex:SetWidth(16)
+            tex:SetHeight(16)
+            tex:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
+            
+            -- Cache the original OnClick handler
+            button.vPeddlerOrigClick = button:GetScript("OnClick")
+            
+            -- Add our click handler
+            button:SetScript("OnClick", function()
+                -- Check for modifier+right click to flag/unflag items
+                if arg1 == "RightButton" then
+                    local modKey = string.lower(vPeddlerDB.modifierKey or "alt")
+                    local modPressed = false
                     
-                    -- Check if the correct modifier key is held
-                    if vPeddlerDB.modifierKey == "ALT" and IsAltKeyDown() then
-                        modifierDown = true
-                    elseif vPeddlerDB.modifierKey == "CTRL" and IsControlKeyDown() then
-                        modifierDown = true
-                    elseif vPeddlerDB.modifierKey == "SHIFT" and IsShiftKeyDown() then
-                        modifierDown = true
+                    if (modKey == "alt" and IsAltKeyDown()) or
+                       (modKey == "ctrl" and IsControlKeyDown()) or
+                       (modKey == "shift" and IsShiftKeyDown()) or
+                       (modKey == "none") then
+                        modPressed = true
                     end
                     
-                    -- If right-clicking with modifier key, capture both before and after
-                    if modifierDown and arg1 == "RightButton" then
-                        -- Get the current flagged state before calling original function
-                        local bag = this:GetParent():GetID()
-                        local slot = this:GetID()
-                        local link = GetContainerItemLink(bag, slot)
-                        
-                        if link then
-                            local itemId = vPeddler_GetItemId(link)
-                            if itemId then
-                                -- Call original function
-                                vPeddler.pfui_original_containerclick(button)
-                                
-                                -- Force immediate refresh of pfUI icons
-                                Debug("Item flag toggled via right-click - forcing refresh")
-                                ForceFullIconRefresh()
+                    if modPressed then
+                        local bagID, slotID = ParseButtonInfo(button)
+                        if bagID and slotID then
+                            local link = GetContainerItemLink(bagID, slotID)
+                            if link then
+                                -- Process flagging/unflagging
+                                ProcessVPeddlerItemClick(link)
                                 return
                             end
                         end
                     end
-                    
-                    -- Default behavior for all other cases
-                    vPeddler.pfui_original_containerclick(button)
                 end
                 
-                Debug("Successfully hooked ContainerFrameItemButton_OnClick for pfUI integration")
+                -- Call original handler if not our function
+                if button.vPeddlerOrigClick then
+                    button.vPeddlerOrigClick()
+                end
+            end)
+            
+            -- Add to our cache
+            buttonCache[button] = true
+            
+            return button
+        end
+
+        -- Update a single button's icon
+        function module:UpdateButton(button)
+            if not button or not button.vPeddlerTex then return end
+            
+            local bagID, slotID = ParseButtonInfo(button)
+            if not bagID or not slotID then
+                button.vPeddlerTex:Hide()
+                return
+            end
+            
+            local link = GetContainerItemLink(bagID, slotID)
+            if not link then
+                button.vPeddlerTex:Hide()
+                return
+            end
+            
+            -- Check if item should be marked
+            if ShouldSellItem(link) then
+                -- Apply settings
+                local size = vPeddlerDB.iconSize or 16
+                local alpha = vPeddlerDB.iconAlpha or 1.0
+                local position = vPeddlerDB.iconPosition or "TOPRIGHT"
+                
+                -- Clear and set position
+                button.vPeddlerTex:ClearAllPoints()
+                button.vPeddlerTex:SetPoint(position, button, position, 0, 0)
+                
+                -- Apply size and alpha
+                button.vPeddlerTex:SetWidth(size)
+                button.vPeddlerTex:SetHeight(size)
+                button.vPeddlerTex:SetAlpha(alpha)
+                
+                -- Get the correct texture
+                local texturePath = "Interface\\AddOns\\vPeddler\\textures\\Peddler_16.tga"
+                
+                if vPeddlerDB.iconTexture then
+                    if vPeddlerDB.iconTexture == "coins" then
+                        local textureSize = "16"
+                        if size >= 36 then
+                            textureSize = "64"
+                        elseif size >= 23 then
+                            textureSize = "32"
+                        end
+                        
+                        local outlinePrefix = ""
+                        if vPeddlerDB.iconOutline then
+                            outlinePrefix = "outline_"
+                        end
+                        
+                        texturePath = "Interface\\AddOns\\vPeddler\\textures\\Peddler_" .. 
+                            outlinePrefix .. textureSize .. ".tga"
+                    elseif vPeddlerDB.iconTexture == "goldcoin" then
+                        texturePath = "Interface\\Icons\\INV_Misc_Coin_01"
+                    elseif type(vPeddlerDB.iconTexture) == "string" then
+                        texturePath = vPeddlerDB.iconTexture
+                    end
+                end
+                
+                -- Apply texture and show
+                button.vPeddlerTex:SetTexture(texturePath)
+                button.vPeddlerTex:Show()
+            else
+                -- Hide icon if item shouldn't be marked
+                button.vPeddlerTex:Hide()
             end
         end
 
-        -- Create the update frame
-        local updateFrame = CreateFrame("Frame")
-        updateFrame:SetScript("OnUpdate", function()
-            if pendingUpdate then
-                ProcessUpdate()
+        -- Update all buttons
+        function module:UpdateAllButtons(force)
+            -- Find any new buttons first
+            self:FindButtons()
+            
+            -- Update all buttons in cache
+            local updated = 0
+            for button in pairs(buttonCache) do
+                self:UpdateButton(button)
+                updated = updated + 1
             end
-        end)
-
-        -- Hook bag events
-        local eventFrame = CreateFrame("Frame")
-        eventFrame:RegisterEvent("BAG_UPDATE")
-        eventFrame:RegisterEvent("ADDON_LOADED")
-        eventFrame:RegisterEvent("MERCHANT_SHOW")
-        eventFrame:RegisterEvent("MERCHANT_CLOSED")
-        eventFrame:RegisterEvent("ITEM_LOCK_CHANGED")
-        eventFrame:SetScript("OnEvent", function()
-            if event == "ADDON_LOADED" then
-                if vPeddlerDB and pfUI then
-                    -- Delay to ensure everything is fully initialized
-                    local timer = CreateFrame("Frame")
-                    local waiting = 0
-                    timer:SetScript("OnUpdate", function()
-                        waiting = waiting + arg1
-                        if waiting > 1.0 then
-                            HookVPeddlerSettings()
-                            HookVPeddlerSliders()
-                            HookVPeddlerFunctions()
-                            HookContainerRightClick()
-                            ForceFullIconRefresh()
-                            timer:SetScript("OnUpdate", nil)
-                            -- Don't unregister ADDON_LOADED as it may be needed for reloads
-                        end
-                    end)
-                end
-            else
-                -- For all other events
-                Debug(event .. " detected")
-                pendingUpdate = true
-                nextUpdateTime = 0
+            
+            if updated > 0 and debugMode then
+                Debug("Updated " .. updated .. " buttons" .. (force and " (forced)" or ""))
             end
-        end)
-
-        -- Only show message if debugMode is enabled
-        if vPeddlerDB and vPeddlerDB.debug then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: pfUI compatibility loaded")
         end
         
-        -- Initialize immediately
-        ForceFullIconRefresh()
+        -- Hook into vPeddler_OnFlagItem to catch direct flagging
+        if not vPeddler.pfUI_OnFlagItemHooked then
+            -- Store original function if it exists
+            vPeddler.pfUI_OrigOnFlagItem = vPeddler_OnFlagItem
+            
+            -- Create new function
+            vPeddler_OnFlagItem = function(itemId, flagged)
+                -- Call original if it exists
+                if vPeddler.pfUI_OrigOnFlagItem then
+                    vPeddler.pfUI_OrigOnFlagItem(itemId, flagged)
+                end
+                
+                -- Force our update
+                if module and module.UpdateAllButtons then
+                    Debug("Item flag changed via vPeddler_OnFlagItem - updating buttons")
+                    module:UpdateAllButtons(true)
+                end
+            end
+            
+            vPeddler.pfUI_OnFlagItemHooked = true
+            Debug("Hooked vPeddler_OnFlagItem function")
+        end
+        
+        -- Initialize the update frame for continuous updates
+        local updateFrame = CreateFrame("Frame")
+        updateFrame:SetScript("OnUpdate", function()
+            -- Throttled updates
+            elapsedTime = elapsedTime + arg1
+            if elapsedTime >= updateThrottle then
+                module:UpdateAllButtons()
+                elapsedTime = 0
+            end
+        end)
+        
+        -- Register for events
+        local eventFrame = CreateFrame("Frame")
+        eventFrame:RegisterEvent("BAG_UPDATE")
+        eventFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
+        eventFrame:RegisterEvent("BANKFRAME_OPENED")
+        eventFrame:RegisterEvent("BANKFRAME_CLOSED")
+        eventFrame:RegisterEvent("PLAYER_MONEY")
+        eventFrame:RegisterEvent("MERCHANT_SHOW")
+        eventFrame:RegisterEvent("MERCHANT_CLOSED")
+        
+        eventFrame:SetScript("OnEvent", function()
+            if debugMode then
+                Debug("Event triggered: " .. event)
+            end
+            
+            -- Force immediate update for these events
+            if event == "BANKFRAME_OPENED" or event == "BAG_UPDATE" or 
+               event == "PLAYERBANKSLOTS_CHANGED" or event == "MERCHANT_CLOSED" then
+                module:UpdateAllButtons(true)
+            end
+        end)
+        
+        -- Add debug commands to global space
+        _G["VPEDDLER_PFUI_DEBUG"] = {
+            ToggleDebug = function() 
+                debugMode = not debugMode
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r Debug mode " .. (debugMode and "enabled" or "disabled"))
+            end,
+            ForceUpdate = function()
+                module:UpdateAllButtons(true)
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r Forced full button update")
+            end,
+            Analyze = function()
+                Debug("Analyzing pfUI buttons...")
+                local bagCount, bankCount, bankBagCount = 0, 0, 0
+                
+                -- Count by type
+                for button in pairs(buttonCache) do
+                    local name = button:GetName() or "unnamed"
+                    local bagID, slotID = ParseButtonInfo(button)
+                    
+                    if bagID == -1 then
+                        bankCount = bankCount + 1
+                    elseif bagID and bagID >= 5 then
+                        bankBagCount = bankBagCount + 1
+                    else
+                        bagCount = bagCount + 1
+                    end
+                    
+                    -- Print details for a few buttons of each type
+                    if (bagID == 0 and slotID <= 2) or 
+                       (bagID == -1 and slotID <= 2) or 
+                       (bagID == 5 and slotID <= 2) then
+                        
+                        local link = bagID and slotID and GetContainerItemLink(bagID, slotID) or "none"
+                        local shouldMark = link ~= "none" and ShouldSellItem(link) or false
+                        DEFAULT_CHAT_FRAME:AddMessage("Button: " .. name .. 
+                                                     " (Bag: " .. tostring(bagID) .. 
+                                                     ", Slot: " .. tostring(slotID) .. 
+                                                     ") - Should mark: " .. tostring(shouldMark) .. 
+                                                     ", Icon shown: " .. tostring(button.vPeddlerTex and button.vPeddlerTex:IsShown() or false))
+                    end
+                end
+                
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r Found " .. bagCount .. " bag buttons, " .. 
+                                           bankCount .. " bank buttons, " .. 
+                                           bankBagCount .. " bank bag buttons")
+            end
+        }
+        
+        -- Force an initial update
+        module:UpdateAllButtons(true)
+        
+        -- Show initialization message if in debug mode
+        if debugMode then
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r Initialized with continuous update functionality")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r Use /run VPEDDLER_PFUI_DEBUG.ToggleDebug() to toggle debug mode")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r Use /run VPEDDLER_PFUI_DEBUG.ForceUpdate() to force an update")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00vPeddler pfUI:|r Use /run VPEDDLER_PFUI_DEBUG.Analyze() to analyze buttons")
+        end
     end)
 end)

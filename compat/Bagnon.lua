@@ -339,117 +339,172 @@ function UpdateBankButtonByItemId(itemId)
     end
 end
 
--- Direct Banknon scanning function
+-- Direct Banknon scanning function - completely rewritten
 function ScanBanknonFrames()
-    local found = 0
-    local marked = 0
+    -- Enable debug to see what's happening
+    local debugThis = false
     
-    -- Look for all possible Banknon frames
-    for i = 1, 100 do
+    -- STEP 1: Remove ALL bank icons to start fresh
+    for i = 1, 200 do
         local button = getglobal("BanknonItem" .. i)
-        if button and button:IsVisible() then
-            found = found + 1
+        if button and button.vPeddlerMark then
+            button.vPeddlerMark:Hide()
+            button.vPeddlerMark:SetParent(nil)
+            button.vPeddlerMark = nil
+        end
+    end
+    
+    -- STEP 2: First scan slots 1-24 (main bank)
+    for slot = 1, 24 do
+        -- Get the item link for this main bank slot
+        local link = GetContainerItemLink(-1, slot)
+        
+        -- If there's an item in this slot, find its button and mark it
+        if link then
+            local itemId = vPeddler_GetItemId(link)
+            local shouldMark = itemId and vPeddlerDB and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId]
             
-            -- Try to get item directly from bank API
-            local bankSlot = button:GetID()
-            if bankSlot and bankSlot > 0 then
-                local link = GetContainerItemLink(-1, bankSlot)
+            if shouldMark then
+                -- Find the button for this slot
+                local button = getglobal("BanknonItem" .. slot)
                 
-                if link then
-                    -- Check if it should be marked
-                    local itemId = vPeddler_GetItemId(link)
-                    if itemId and vPeddlerDB and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
-                        -- Force create mark regardless of existing one
-                        if not button.vPeddlerMark then
-                            CreateVendorMark(button)
-                        end
-                        
-                        if button.vPeddlerMark then
-                            button.vPeddlerMark:Show()
-                            marked = marked + 1
-                        end
-                    elseif button.vPeddlerMark then
-                        button.vPeddlerMark:Hide()
-                    end
+                if button and button:IsVisible() then
+                    -- Create mark
+                    CreateVendorMark(button)
+                    button.vPeddlerMark:Show()
                     
-                    -- Fix right-click handling for flagging
-                    if not button.vPeddlerClickHooked then
-                        -- Save the original OnClick script
-                        button.vPeddlerOriginalOnClick = button:GetScript("OnClick")
-                        
-                        -- Set the new OnClick handler that respects vPeddler's modifier setting
-                        button:SetScript("OnClick", function()
-                            if arg1 == "RightButton" then
-                                -- Check which modifier key is configured in vPeddler
-                                local modifierValid = false
-                                
-                                if vPeddlerDB.modifierKey == "alt" and IsAltKeyDown() then
-                                    modifierValid = true
-                                elseif vPeddlerDB.modifierKey == "ctrl" and IsControlKeyDown() then
-                                    modifierValid = true
-                                elseif vPeddlerDB.modifierKey == "shift" and IsShiftKeyDown() then
-                                    modifierValid = true
-                                elseif not vPeddlerDB.modifierKey or vPeddlerDB.modifierKey == "none" then
-                                    -- If no modifier is set, or it's explicitly set to none
-                                    modifierValid = true
-                                end
-                                
-                                if modifierValid then
-                                    -- Get the item link
-                                    local itemLink = GetContainerItemLink(-1, this:GetID())
-                                    if itemLink then
-                                        -- Get item ID before processing
-                                        local clickedItemId = vPeddler_GetItemId(itemLink)
-                                        
-                                        -- Current flag state before toggling
-                                        local wasFlagged = vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[clickedItemId]
-                                        
-                                        -- Try to use vPeddler's standard item click processing
-                                        if vPeddler_ProcessItemClick then
-                                            vPeddler_ProcessItemClick(itemLink)
-                                        else
-                                            -- Fallback: Toggle flag status directly
-                                            if clickedItemId then
-                                                vPeddler_SetItemFlag(clickedItemId, not wasFlagged)
-                                            end
-                                        end
-                                        
-                                        -- Use a timer to update after the database change has registered
-                                        local updateTimer = CreateFrame("Frame")
-                                        updateTimer:SetScript("OnUpdate", function()
-                                            this.elapsed = (this.elapsed or 0) + arg1
-                                            if this.elapsed < 0.05 then return end
-                                            updateTimer:SetScript("OnUpdate", nil)
-                                            
-                                            -- First update the specific item
-                                            if clickedItemId then
-                                                UpdateBankButtonByItemId(clickedItemId)
-                                            end
-                                            
-                                            -- Then do a full scan to catch any other changes
-                                            ScanBanknonFrames()
-                                        end)
-                                        
-                                        return -- Don't call the original handler
-                                    end
-                                end
-                            end
-                            
-                            -- Not our special click, call original handler
-                            if button.vPeddlerOriginalOnClick then
-                                button.vPeddlerOriginalOnClick()
-                            end
-                        end)
-                        button.vPeddlerClickHooked = true
+                    -- Save correct bag/slot info
+                    button.vPeddlerBagId = -1
+                    button.vPeddlerSlotId = slot
+                    
+                    if debugThis then
+                        Debug("Marked main bank slot " .. slot .. " with item ID " .. itemId)
                     end
-                elseif button.vPeddlerMark then
-                    button.vPeddlerMark:Hide()
                 end
             end
         end
     end
     
-    return found, marked
+    -- STEP 3: Now scan bank bags (containers 5-11)
+    local continousSlotId = 25  -- Banknon seems to use slots 25+ for bank bags
+    
+    for bagId = 5, 11 do
+        local numSlots = GetContainerNumSlots(bagId)
+        
+        for slot = 1, numSlots do
+            local link = GetContainerItemLink(bagId, slot)
+            
+            if link then
+                local itemId = vPeddler_GetItemId(link)
+                local shouldMark = itemId and vPeddlerDB and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId]
+                
+                if shouldMark then
+                    -- Try to find the correct button for this bank bag slot
+                    -- We'll try the calculated continuous slot ID first
+                    local button = getglobal("BanknonItem" .. continousSlotId)
+                    
+                    if button and button:IsVisible() then
+                        -- Create mark
+                        CreateVendorMark(button)
+                        button.vPeddlerMark:Show()
+                        
+                        -- Save correct bag/slot info
+                        button.vPeddlerBagId = bagId
+                        button.vPeddlerSlotId = slot
+                        
+                        if debugThis then
+                            Debug("Marked bank bag " .. bagId .. " slot " .. slot .. 
+                                  " as button " .. continousSlotId .. " with item ID " .. itemId)
+                        end
+                    end
+                end
+            end
+            
+            -- Increment to the next continuous slot ID
+            continousSlotId = continousSlotId + 1
+        end
+    end
+    
+    -- STEP 4: Set up right-click handling for all bank buttons
+    for i = 1, 100 do
+        local button = getglobal("BanknonItem" .. i)
+        if button and button:IsVisible() and not button.vPeddlerClickHooked then
+            -- Set up right-click handling
+            SetupBankButtonRightClick(button)
+        end
+    end
+    
+    return true
+end
+
+-- Helper function to set up right-click handling
+function SetupBankButtonRightClick(button)
+    -- Save the original OnClick script
+    button.vPeddlerOriginalOnClick = button:GetScript("OnClick")
+    
+    -- Set the new OnClick handler
+    button:SetScript("OnClick", function()
+        if arg1 == "RightButton" then
+            -- Check which modifier key is configured in vPeddler
+            local modifierValid = false
+            
+            if vPeddlerDB.modifierKey == "alt" and IsAltKeyDown() then
+                modifierValid = true
+            elseif vPeddlerDB.modifierKey == "ctrl" and IsControlKeyDown() then
+                modifierValid = true
+            elseif vPeddlerDB.modifierKey == "shift" and IsShiftKeyDown() then
+                modifierValid = true
+            elseif not vPeddlerDB.modifierKey or vPeddlerDB.modifierKey == "none" then
+                modifierValid = true
+            end
+            
+            if modifierValid then
+                -- Get the item link - try to use stored bag/slot first
+                local itemLink
+                if this.vPeddlerBagId and this.vPeddlerSlotId then
+                    itemLink = GetContainerItemLink(this.vPeddlerBagId, this.vPeddlerSlotId)
+                else
+                    -- Use button ID as fallback
+                    local buttonId = this:GetID()
+                    if buttonId <= 24 then
+                        itemLink = GetContainerItemLink(-1, buttonId)
+                    end
+                end
+                
+                if itemLink then
+                    -- Process the click
+                    if vPeddler_ProcessItemClick then
+                        vPeddler_ProcessItemClick(itemLink)
+                    else
+                        -- Fallback: Toggle flag status directly
+                        local clickedItemId = vPeddler_GetItemId(itemLink)
+                        if clickedItemId then
+                            local wasFlagged = vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[clickedItemId]
+                            vPeddler_SetItemFlag(clickedItemId, not wasFlagged)
+                        end
+                    end
+                    
+                    -- Force a rescan after a small delay
+                    local timer = CreateFrame("Frame")
+                    timer:SetScript("OnUpdate", function()
+                        this.elapsed = (this.elapsed or 0) + arg1
+                        if this.elapsed < 0.1 then return end
+                        timer:SetScript("OnUpdate", nil)
+                        ScanBanknonFrames()
+                    end)
+                    
+                    return -- Don't call original handler
+                end
+            end
+        end
+        
+        -- Not our special click, call original handler
+        if button.vPeddlerOriginalOnClick then
+            button.vPeddlerOriginalOnClick()
+        end
+    end)
+    
+    button.vPeddlerClickHooked = true
 end
 
 -- Update the bank event handler
@@ -473,6 +528,7 @@ end)
 local bankUpdateFrame = CreateFrame("Frame")
 bankUpdateFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
 bankUpdateFrame:SetScript("OnEvent", function()
+    -- Update without any debug output
     ScanBanknonFrames()
 end)
 
@@ -732,13 +788,13 @@ function CleanupBankIcons()
     -- Check for buttons using Bagnon's bank item naming patterns
     for i = 1, 200 do
         -- Try different possible bank button naming patterns
-        local button = getglobal("BanknonItem" .. i) or
-                       getglobal("BagnonBankItem" .. i) or 
-                       getglobal("BanknItem" .. i) or
-                       getglobal("BagnonItem" .. (i + 100))
+        local button = getglobal("BanknonItem" .. i)
         
         if button and button.vPeddlerMark then
             button.vPeddlerMark:Hide()
+            button.vPeddlerMark:SetParent(nil)
+            button.vPeddlerMark = nil
+            button.vPeddlerIcon = nil
             cleanCount = cleanCount + 1
         end
     end
@@ -746,86 +802,57 @@ function CleanupBankIcons()
     Debug("Cleaned up " .. cleanCount .. " bank item icons")
 end
 
--- Add this continuous monitoring system for bank icons
-local bankMonitorFrame
-local function StartBankMonitoring()
-    -- Create the monitor frame if it doesn't exist
-    if not bankMonitorFrame then
-        bankMonitorFrame = CreateFrame("Frame")
-        bankMonitorFrame.elapsed = 0
-        bankMonitorFrame.throttle = 0.5 -- Check every half second
-    end
+-- Create a continuous bank monitoring system that ensures icons stay updated
+local bankMonitorFrame = CreateFrame("Frame")
+bankMonitorFrame:Hide()  -- Start hidden until bank opens
+local bankUpdateThrottle = 0.5  -- Update every half second as suggested
+
+-- Bank monitor update function
+bankMonitorFrame:SetScript("OnUpdate", function()
+    this.elapsed = (this.elapsed or 0) + arg1
+    if this.elapsed < bankUpdateThrottle then return end
+    this.elapsed = 0
     
-    -- Set the OnUpdate script to monitor bank items
-    bankMonitorFrame:SetScript("OnUpdate", function()
-        -- Throttle updates
-        this.elapsed = this.elapsed + arg1
-        if this.elapsed < this.throttle then return end
-        this.elapsed = 0
-        
-        -- Check all BanknonItems and ensure their icon state matches the database
-        for i = 1, 100 do
-            local button = getglobal("BanknonItem" .. i)
-            if button and button:IsVisible() then
-                local bankSlot = button:GetID()
-                if bankSlot and bankSlot > 0 then
-                    local link = GetContainerItemLink(-1, bankSlot)
-                    
-                    if link then
-                        -- Check if item should be marked
-                        local itemId = vPeddler_GetItemId(link)
-                        local shouldBeFlagged = itemId and vPeddlerDB and 
-                                               vPeddlerDB.flaggedItems and 
-                                               vPeddlerDB.flaggedItems[itemId]
-                        
-                        -- Check current display state
-                        local isCurrentlyFlagged = button.vPeddlerMark and button.vPeddlerMark:IsShown()
-                        
-                        -- Fix any discrepancy
-                        if shouldBeFlagged ~= isCurrentlyFlagged then
-                            if shouldBeFlagged then
-                                -- Should show mark
-                                if not button.vPeddlerMark then
-                                    CreateVendorMark(button)
-                                end
-                                button.vPeddlerMark:Show()
-                            else
-                                -- Should hide mark
-                                if button.vPeddlerMark then
-                                    button.vPeddlerMark:Hide()
-                                end
-                            end
-                        end
-                    elseif button.vPeddlerMark then
-                        -- No item, hide any mark
-                        button.vPeddlerMark:Hide()
-                    end
-                end
-            end
-        end
-    end)
-end
+    -- Run the bank scan without debug spam
+    ScanBanknonFrames()
+end)
 
-local function StopBankMonitoring()
-    if bankMonitorFrame then
-        bankMonitorFrame:SetScript("OnUpdate", nil)
-    end
-end
-
--- Register bank open/close events to start/stop monitoring
-local bankMonitorControl = CreateFrame("Frame")
-bankMonitorControl:RegisterEvent("BANKFRAME_OPENED")
-bankMonitorControl:RegisterEvent("BANKFRAME_CLOSED")
-bankMonitorControl:SetScript("OnEvent", function()
+-- Update bank event handlers to enable/disable continuous monitoring
+local bankEventFrame = CreateFrame("Frame")
+bankEventFrame:RegisterEvent("BANKFRAME_OPENED")
+bankEventFrame:RegisterEvent("BANKFRAME_CLOSED")
+bankEventFrame:SetScript("OnEvent", function()
     if event == "BANKFRAME_OPENED" then
-        -- Initial scan
+        -- Run a scan immediately when bank opens
         ScanBanknonFrames()
-        -- Start continuous monitoring
-        StartBankMonitoring()
+        
+        -- Enable continuous monitoring
+        bankMonitorFrame.elapsed = 0
+        bankMonitorFrame:Show()
+        
+        -- Then scan again after a small delay to ensure all items are loaded
+        local timer = CreateFrame("Frame")
+        timer:SetScript("OnUpdate", function()
+            this.elapsed = (this.elapsed or 0) + arg1
+            if this.elapsed < 0.5 then return end
+            timer:SetScript("OnUpdate", nil)
+            ScanBanknonFrames()
+        end)
     elseif event == "BANKFRAME_CLOSED" then
-        -- Stop monitoring when bank closes
-        StopBankMonitoring()
+        -- Disable continuous monitoring when bank closes
+        bankMonitorFrame:Hide()
+        
+        -- Clean up icons
+        CleanupBankIcons()
     end
+end)
+
+-- Replace the PLAYERBANKSLOTS_CHANGED handler - no longer needed with continuous monitoring
+local bankUpdateFrame = CreateFrame("Frame")
+bankUpdateFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
+bankUpdateFrame:SetScript("OnEvent", function()
+    -- Force an immediate update when a bank slot changes
+    bankMonitorFrame.elapsed = bankUpdateThrottle  -- Force update on next OnUpdate
 end)
 
 -- Initialize the module
@@ -847,7 +874,7 @@ function Initialize()
             local timer = CreateFrame("Frame")
             timer:SetScript("OnUpdate", function()
                 this.elapsed = (this.elapsed or 0) + arg1
-                if this.elapsed < 0.5 then return end
+                if this.elapsed < 0.25 then return end
                 timer:SetScript("OnUpdate", nil)
                 
                 ScanBanknonFrames()
