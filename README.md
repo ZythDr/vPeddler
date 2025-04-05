@@ -44,10 +44,10 @@ add/remove any item in your inventory to your auto-sell list
 - [x] Blizzard bags  
 - [x] Bagshui (req ctrl/shift modifier, change in /vp)
 - [x] Bagnon  
-- [x] EngBags (bank WIP)
+- [x] EngBags (bank frames = WIP)
 - [x] pfUI bags  
 - [x] SUCC-bag  
-- [x] Turtle-Dragonflight (bank WIP)
+- [x] Turtle-Dragonflight (bank frames = WIP)
 
 **Commands**
 
