@@ -7,6 +7,50 @@ vPeddler.version = "1.0"
 vPeddler.isVendorOpen = false
 vPeddler.itemCache = {}  -- Cache to track item status
 
+-- SavedVariablesPerCharacter storage (defined in TOC)
+vPeddlerCharDB = vPeddlerCharDB or {}
+
+-- Helper to access this character's persistent data
+function vPeddler_GetCharDB()
+    vPeddlerCharDB = vPeddlerCharDB or {}
+    vPeddlerCharDB.flaggedItems = vPeddlerCharDB.flaggedItems or {}
+    vPeddlerCharDB.autoFlaggedItems = vPeddlerCharDB.autoFlaggedItems or {}
+    vPeddlerCharDB.manuallyUnflagged = vPeddlerCharDB.manuallyUnflagged or {}
+    return vPeddlerCharDB
+end
+
+local function vPeddler_MigrateGlobalFlagsToCharacter()
+    if not vPeddlerDB then return end
+    local charDB = vPeddler_GetCharDB()
+
+    if vPeddlerDB.flaggedItems then
+        if next(charDB.flaggedItems) == nil then
+            for itemId, value in pairs(vPeddlerDB.flaggedItems) do
+                charDB.flaggedItems[itemId] = value
+            end
+        end
+        vPeddlerDB.flaggedItems = nil
+    end
+
+    if vPeddlerDB.autoFlaggedItems then
+        if next(charDB.autoFlaggedItems) == nil then
+            for itemId, value in pairs(vPeddlerDB.autoFlaggedItems) do
+                charDB.autoFlaggedItems[itemId] = value
+            end
+        end
+        vPeddlerDB.autoFlaggedItems = nil
+    end
+
+    if vPeddlerDB.manuallyUnflagged then
+        if next(charDB.manuallyUnflagged) == nil then
+            for itemId, value in pairs(vPeddlerDB.manuallyUnflagged) do
+                charDB.manuallyUnflagged[itemId] = value
+            end
+        end
+        vPeddlerDB.manuallyUnflagged = nil
+    end
+end
+
 -- Basic initialization
 -- Consolidated initialization function
 function vPeddler_InitDefaults(force)
@@ -16,7 +60,6 @@ function vPeddler_InitDefaults(force)
             enabled = true,
             autoSell = true,
             autoRepair = true,
-            flaggedItems = {},
             verboseMode = true,
             iconSize = 16,
             iconAlpha = 1.0,
@@ -42,8 +85,6 @@ function vPeddler_InitDefaults(force)
         }
     else
         -- Ensure all critical settings exist even for existing profiles
-        if not vPeddlerDB.flaggedItems then vPeddlerDB.flaggedItems = {} end
-        
         -- Ensure icon settings exist
         if vPeddlerDB.iconSize == nil then vPeddlerDB.iconSize = 16 end
         if vPeddlerDB.iconAlpha == nil then vPeddlerDB.iconAlpha = 1.0 end
@@ -77,12 +118,6 @@ function vPeddler_InitDefaults(force)
     vPeddlerDB.autoFlagGrey = nil
     vPeddlerDB.autoFlagGray = nil
     
-    -- Add tracking table for auto-flagged items
-    vPeddlerDB.autoFlaggedItems = vPeddlerDB.autoFlaggedItems or {}
-    
-    -- Ensure manuallyUnflagged table exists
-    vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
-
     -- Only set if not already set (using nil check instead of 'or' operator)
     if vPeddlerDB.enabled == nil then vPeddlerDB.enabled = true end
     if vPeddlerDB.autoRepair == nil then vPeddlerDB.autoRepair = true end
@@ -90,6 +125,9 @@ function vPeddler_InitDefaults(force)
     if vPeddlerDB.autoFlagGrays == nil then vPeddlerDB.autoFlagGrays = true end
     if vPeddlerDB.manualSellButton == nil then vPeddlerDB.manualSellButton = false end
     if vPeddlerDB.verboseMode == nil then vPeddlerDB.verboseMode = true end
+
+    -- Ensure per-character storage exists
+    vPeddler_GetCharDB()
 end
 
 vPeddler.texturePool = {}
@@ -113,6 +151,7 @@ function vPeddler_OnEvent()
     if event == "ADDON_LOADED" then
         if arg1 == "vPeddler" then
             vPeddler_InitDefaults()
+            vPeddler_MigrateGlobalFlagsToCharacter()
             vPeddler_Initialize()
             
             -- Register remaining events after loading
@@ -228,6 +267,7 @@ function vPeddler_AutoRepair()
 end
 
 function vPeddler_SellJunk()
+    local charDB = vPeddler_GetCharDB()
     -- Clear any existing queue
     vPeddler.sellQueue = {}
     vPeddler.queueSize = 0
@@ -249,7 +289,7 @@ function vPeddler_SellJunk()
                 local shouldSell = false
                 
                 -- Check manually flagged items
-                if itemId and vPeddlerDB.flaggedItems[itemId] then
+                if itemId and charDB.flaggedItems[itemId] then
                     shouldSell = true
                 end
                 if shouldSell then
@@ -400,15 +440,11 @@ function vPeddler_HookContainerFrames()
                     name = name or ("ItemID: "..itemId)
                     
                     -- Toggle flagged status
-                    if vPeddlerDB.flaggedItems[itemId] then
+                    local charDB = vPeddler_GetCharDB()
+                    if charDB.flaggedItems[itemId] then
                         vPeddler_UnflagItem(itemId, link)
                     else
-                        vPeddlerDB.flaggedItems[itemId] = true
-                        
-                        -- Print to chat if verbose mode is enabled
-                        if vPeddlerDB.verboseMode then
-                            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added "..link.." to auto-sell list")
-                        end
+                        vPeddler_FlagItem(itemId, link)
                     end
                     
                     -- Update all instances of this item across all bags
@@ -431,6 +467,8 @@ function vPeddler_UpdateSingleSlotMarker(bag, slot)
     
     -- Skip if addon is disabled
     if not vPeddlerDB.enabled then return end
+
+    local charDB = vPeddler_GetCharDB()
     
     -- Name for our marker texture
     local markerName = "vPeddlerMarker"..bag.."_"..slot
@@ -453,7 +491,7 @@ function vPeddler_UpdateSingleSlotMarker(bag, slot)
     local shouldMark = false
     
     -- Check manually flagged items
-    if itemId and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
+    if itemId and charDB.flaggedItems[itemId] then
         shouldMark = true
     end
     
@@ -627,6 +665,7 @@ end
 
 function vPeddler_BuildItemCache()
     vPeddler.itemCache = {}  -- Reset cache
+    local charDB = vPeddler_GetCharDB()
     
     for bag = 0, 4 do
         for slot = 1, GetContainerNumSlots(bag) do
@@ -639,7 +678,7 @@ function vPeddler_BuildItemCache()
                     -- Calculate and cache whether this item should be sold
                     local shouldSell = false
                     
-                    if itemId and vPeddlerDB.flaggedItems[itemId] then
+                    if itemId and charDB.flaggedItems[itemId] then
                         shouldSell = true
                     end
                     
@@ -765,10 +804,7 @@ end
 function vPeddler_AutoFlagGrayItems(forceFlag)
     if not vPeddlerDB then return 0 end
     
-    -- Ensure all required tables exist before using them
-    vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
-    vPeddlerDB.autoFlaggedItems = vPeddlerDB.autoFlaggedItems or {}
-    vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
+    local charDB = vPeddler_GetCharDB()
     
     local flaggedCount = 0
     local grayCount = 0
@@ -787,14 +823,13 @@ function vPeddler_AutoFlagGrayItems(forceFlag)
                     local itemId = vPeddler_GetItemId(link)
                     if itemId then
                         -- Only flag if not explicitly unflagged previously
-                        local isManuallyUnflagged = vPeddlerDB.manuallyUnflagged and 
-                                                 vPeddlerDB.manuallyUnflagged[itemId]
+                        local isManuallyUnflagged = charDB.manuallyUnflagged[itemId]
                         
                         if (not isManuallyUnflagged) or forceFlag then
                             -- Auto-flag this item
-                            vPeddlerDB.flaggedItems[itemId] = true
+                            charDB.flaggedItems[itemId] = true
                             -- Track that this item was auto-flagged
-                            vPeddlerDB.autoFlaggedItems[itemId] = true
+                            charDB.autoFlaggedItems[itemId] = true
                             flaggedCount = flaggedCount + 1
                         end
                     end
@@ -838,19 +873,16 @@ end
 function vPeddler_UnflagItem(itemId, link)
     if not itemId or not vPeddlerDB then return end
     
-    -- Ensure tables exist before accessing them
-    vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
-    vPeddlerDB.autoFlaggedItems = vPeddlerDB.autoFlaggedItems or {}
-    vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
+    local charDB = vPeddler_GetCharDB()
     
     -- Remove from flagged items
-    if vPeddlerDB.flaggedItems[itemId] then
-        vPeddlerDB.flaggedItems[itemId] = nil
+    if charDB.flaggedItems[itemId] then
+        charDB.flaggedItems[itemId] = nil
     end
     
     -- Also remove from auto-flagged items since user manually unflagged it
-    if vPeddlerDB.autoFlaggedItems[itemId] then
-        vPeddlerDB.autoFlaggedItems[itemId] = nil
+    if charDB.autoFlaggedItems[itemId] then
+        charDB.autoFlaggedItems[itemId] = nil
     end
     
     -- Check if this is a gray item by looking at the link color
@@ -858,7 +890,7 @@ function vPeddler_UnflagItem(itemId, link)
     
     -- Only add to manually unflagged if it's a gray item
     if isGray then
-        vPeddlerDB.manuallyUnflagged[itemId] = true
+        charDB.manuallyUnflagged[itemId] = true
     end
     
     -- Print to chat if verbose mode is enabled
@@ -874,11 +906,11 @@ end
 function vPeddler_FlagItem(itemId, link)
     if not itemId or not vPeddlerDB then return end
     
-    -- Ensure flagged items table exists
-    vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
+    local charDB = vPeddler_GetCharDB()
     
     -- Add to flagged items
-    vPeddlerDB.flaggedItems[itemId] = true
+    charDB.flaggedItems[itemId] = true
+    charDB.manuallyUnflagged[itemId] = nil
     
     -- Print to chat if verbose mode is enabled
     if vPeddlerDB.verboseMode then
@@ -889,26 +921,30 @@ function vPeddler_FlagItem(itemId, link)
     vPeddler_UpdateAllInstancesOfItem(itemId)
 end
 
+function vPeddler_IsItemFlagged(itemId)
+    if not itemId or not vPeddler_GetCharDB then return false end
+    local charDB = vPeddler_GetCharDB()
+    return charDB.flaggedItems[itemId] == true
+end
+
 function vPeddler_ClearAutoFlaggedItems()
     if not vPeddlerDB then return 0 end
     
-    -- Ensure tables exist
-    vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
-    vPeddlerDB.autoFlaggedItems = vPeddlerDB.autoFlaggedItems or {}
+    local charDB = vPeddler_GetCharDB()
     
     local unflaggedCount = 0
     
     -- Loop through the auto-flagged items table
-    for itemId in pairs(vPeddlerDB.autoFlaggedItems) do
+    for itemId in pairs(charDB.autoFlaggedItems) do
         -- Remove the flag from the main table
-        if vPeddlerDB.flaggedItems[itemId] then
-            vPeddlerDB.flaggedItems[itemId] = nil
+        if charDB.flaggedItems[itemId] then
+            charDB.flaggedItems[itemId] = nil
             unflaggedCount = unflaggedCount + 1
         end
     end
     
     -- Clear the auto-flagged tracking table
-    vPeddlerDB.autoFlaggedItems = {}
+    charDB.autoFlaggedItems = {}
     
     -- Update bag markers to show the changes
     vPeddler_UpdateBagSlotMarkers()
@@ -920,10 +956,7 @@ end
 function vPeddler_AutoFlagGrayItems()
     if not vPeddlerDB then return 0 end
     
-    -- Ensure tables exist
-    vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
-    vPeddlerDB.autoFlaggedItems = vPeddlerDB.autoFlaggedItems or {}
-    vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
+    local charDB = vPeddler_GetCharDB()
     
     local flaggedCount = 0
     local grayCount = 0
@@ -942,13 +975,13 @@ function vPeddler_AutoFlagGrayItems()
                     local itemId = vPeddler_GetItemId(link)
                     if itemId then
                         -- Only flag if not explicitly unflagged previously
-                        local isManuallyUnflagged = vPeddlerDB.manuallyUnflagged[itemId]
+                        local isManuallyUnflagged = charDB.manuallyUnflagged[itemId]
                         
                         if not isManuallyUnflagged then
                             -- Auto-flag this item
-                            vPeddlerDB.flaggedItems[itemId] = true
+                            charDB.flaggedItems[itemId] = true
                             -- Track that this item was auto-flagged
-                            vPeddlerDB.autoFlaggedItems[itemId] = true
+                            charDB.autoFlaggedItems[itemId] = true
                             flaggedCount = flaggedCount + 1
                         end
                     end
@@ -972,10 +1005,7 @@ end
 function vPeddler_ProcessNewGrayItems()
     if not vPeddlerDB then return 0 end
     
-    -- Ensure tables exist
-    vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
-    vPeddlerDB.autoFlaggedItems = vPeddlerDB.autoFlaggedItems or {}
-    vPeddlerDB.manuallyUnflagged = vPeddlerDB.manuallyUnflagged or {}
+    local charDB = vPeddler_GetCharDB()
     
     local flaggedCount = 0
     
@@ -992,12 +1022,12 @@ function vPeddler_ProcessNewGrayItems()
                     local itemId = vPeddler_GetItemId(link)
                     if itemId then
                         -- Only flag if not manually unflagged AND not already flagged
-                        local isManuallyUnflagged = vPeddlerDB.manuallyUnflagged[itemId]
+                        local isManuallyUnflagged = charDB.manuallyUnflagged[itemId]
                         
-                        if not isManuallyUnflagged and not vPeddlerDB.flaggedItems[itemId] then
+                        if not isManuallyUnflagged and not charDB.flaggedItems[itemId] then
                             -- Auto-flag this item
-                            vPeddlerDB.flaggedItems[itemId] = true
-                            vPeddlerDB.autoFlaggedItems[itemId] = true
+                            charDB.flaggedItems[itemId] = true
+                            charDB.autoFlaggedItems[itemId] = true
                             flaggedCount = flaggedCount + 1
                             
                             -- Debug output in verbose mode

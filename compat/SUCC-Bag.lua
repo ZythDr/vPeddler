@@ -84,7 +84,7 @@ initFrame:SetScript("OnEvent", function()
             if not itemId then return false end
             
             -- Check if manually flagged
-            if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
+            if vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId) then
                 Debug("Item accepted: " .. link .. " is flagged")
                 return true
             end
@@ -101,10 +101,10 @@ initFrame:SetScript("OnEvent", function()
 
         -- Add a function to check if an item is flagged
         local function IsItemFlagged(itemId)
-            if not itemId or not vPeddlerDB or not vPeddlerDB.flaggedItems then
+            if not itemId or not vPeddler_IsItemFlagged then
                 return false
             end
-            return vPeddlerDB.flaggedItems[itemId] == true
+            return vPeddler_IsItemFlagged(itemId)
         end
 
         -- Check if SUCC_bag is currently visible
@@ -126,30 +126,10 @@ initFrame:SetScript("OnEvent", function()
             if not itemId then return end
             
             -- Toggle flag status
-            vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
-            
-            if vPeddlerDB.flaggedItems[itemId] then
-                -- Item is currently flagged, unflag it
-                vPeddlerDB.flaggedItems[itemId] = nil
-                
-                -- Output if verbose mode is enabled
-                if vPeddlerDB.verboseMode then
-                    local name = GetItemInfo(link)
-                    if name then
-                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed " .. name .. " from auto-sell list")
-                    end
-                end
+            if IsItemFlagged(itemId) then
+                vPeddler_UnflagItem(itemId, link)
             else
-                -- Item is not flagged, flag it
-                vPeddlerDB.flaggedItems[itemId] = true
-                
-                -- Output if verbose mode is enabled
-                if vPeddlerDB.verboseMode then
-                    local name = GetItemInfo(link)
-                    if name then
-                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added " .. name .. " to auto-sell list")
-                    end
-                end
+                vPeddler_FlagItem(itemId, link)
             end
         end
 
@@ -469,7 +449,7 @@ initFrame:SetScript("OnEvent", function()
                     -- Try to get item info
                     local link = GetContainerItemLink(-1, frame:GetID())
                     local itemId = link and GetItemId(link)
-                    local isFlagged = itemId and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId]
+                    local isFlagged = itemId and vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId)
                     
                     DEFAULT_CHAT_FRAME:AddMessage("Button " .. frameName .. " ID: " .. frame:GetID() .. 
                         ", Hooked: " .. (buttonCache[frame] and "Yes" or "No") .. 
