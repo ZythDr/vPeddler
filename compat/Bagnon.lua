@@ -136,7 +136,7 @@ local function ShouldMarkAsVendor(link)
     if not itemId then return false end
     
     -- Check if manually flagged
-    if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
+    if vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId) then
         return true
     end
     
@@ -317,7 +317,7 @@ function UpdateBankButtonByItemId(itemId)
                     local buttonItemId = vPeddler_GetItemId(link)
                     if buttonItemId and buttonItemId == itemId then
                         -- Check if it should be marked now
-                        local shouldMark = vPeddlerDB and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId]
+                        local shouldMark = vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId)
                         
                         -- Force icon state based on current flag status
                         if shouldMark then
@@ -362,7 +362,7 @@ function ScanBanknonFrames()
         -- If there's an item in this slot, find its button and mark it
         if link then
             local itemId = vPeddler_GetItemId(link)
-            local shouldMark = itemId and vPeddlerDB and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId]
+            local shouldMark = itemId and vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId)
             
             if shouldMark then
                 -- Find the button for this slot
@@ -396,7 +396,7 @@ function ScanBanknonFrames()
             
             if link then
                 local itemId = vPeddler_GetItemId(link)
-                local shouldMark = itemId and vPeddlerDB and vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId]
+                local shouldMark = itemId and vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId)
                 
                 if shouldMark then
                     -- Try to find the correct button for this bank bag slot
@@ -479,8 +479,15 @@ function SetupBankButtonRightClick(button)
                         -- Fallback: Toggle flag status directly
                         local clickedItemId = vPeddler_GetItemId(itemLink)
                         if clickedItemId then
-                            local wasFlagged = vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[clickedItemId]
-                            vPeddler_SetItemFlag(clickedItemId, not wasFlagged)
+                            local wasFlagged = vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(clickedItemId)
+                            local shouldFlag = not wasFlagged
+                            if vPeddler_SetItemFlag then
+                                vPeddler_SetItemFlag(clickedItemId, shouldFlag)
+                            elseif shouldFlag and vPeddler_FlagItem then
+                                vPeddler_FlagItem(clickedItemId, itemLink)
+                            elseif not shouldFlag and vPeddler_UnflagItem then
+                                vPeddler_UnflagItem(clickedItemId, itemLink)
+                            end
                         end
                     end
                     

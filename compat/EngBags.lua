@@ -116,7 +116,7 @@ initFrame:SetScript("OnEvent", function()
             if not itemId then return false end
             
             -- Check manually flagged items
-            if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
+            if vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId) then
                 return true
             end
             
@@ -198,15 +198,15 @@ initFrame:SetScript("OnEvent", function()
                         local itemId = vPeddler_GetItemId(link)
                         if itemId then
                             -- Toggle flag status
-                            if not vPeddlerDB.flaggedItems then vPeddlerDB.flaggedItems = {} end
-                            
-                            if vPeddlerDB.flaggedItems[itemId] then
-                                -- Let the main addon handle the message
-                                vPeddler_UnflagItem(itemId, link)
+                            local wasFlagged = vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId)
+                            if wasFlagged then
+                                if vPeddler_UnflagItem then
+                                    vPeddler_UnflagItem(itemId, link)
+                                end
                             else
-                                vPeddlerDB.flaggedItems[itemId] = true
-                                -- Let the main addon handle this message too
-                                if vPeddler and vPeddler.HandleItemFlagged then
+                                if vPeddler_FlagItem then
+                                    vPeddler_FlagItem(itemId, link)
+                                elseif vPeddler and vPeddler.HandleItemFlagged then
                                     vPeddler.HandleItemFlagged(itemId, link)
                                 end
                             end

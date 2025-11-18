@@ -65,7 +65,7 @@ local function ShouldSellItem(link)
     if not itemId then return false end
     
     -- Check if manually flagged
-    if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
+    if vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId) then
         return true
     end
     

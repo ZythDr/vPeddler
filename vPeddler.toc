@@ -4,6 +4,7 @@
 ## Author: Peachoo @ Nordanaar - Turtle WoW
 ## Version: 1.0
 ## SavedVariables: vPeddlerDB
+## SavedVariablesPerCharacter: vPeddlerCharDB
 
 vPeddler.lua
 # WantedItems.lua

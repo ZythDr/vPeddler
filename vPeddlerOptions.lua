@@ -324,14 +324,25 @@ function vPeddlerOptions_ResetDefaults()
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
-            -- Store flaggedItems before reset
-            local oldFlagged = vPeddlerDB.flaggedItems or {}
+            local charDB = vPeddler_GetCharDB and vPeddler_GetCharDB() or nil
+            local oldFlagged, oldManual = {}, {}
+            if charDB then
+                for itemId, value in pairs(charDB.flaggedItems or {}) do
+                    oldFlagged[itemId] = value
+                end
+                for itemId, value in pairs(charDB.manuallyUnflagged or {}) do
+                    oldManual[itemId] = value
+                end
+            end
             
             -- Reset settings
             vPeddler_InitDefaults(true); -- true means force reset
             
-            -- Restore flagged items
-            vPeddlerDB.flaggedItems = oldFlagged
+            -- Restore per-character flags
+            if charDB then
+                charDB.flaggedItems = oldFlagged
+                charDB.manuallyUnflagged = oldManual
+            end
             
             -- Refresh the UI
             vPeddlerOptions_OnShow();
@@ -354,11 +365,14 @@ end
 -- Add this new function to reset flagged items:
 
 function vPeddlerOptions_ResetFilters()
-    -- Reset manually flagged items
-    vPeddlerDB.flaggedItems = {}
-    
-    -- Reset manually unflagged items
-    vPeddlerDB.manuallyUnflagged = {}
+    local charDB = vPeddler_GetCharDB and vPeddler_GetCharDB()
+    if charDB then
+        -- Reset manually flagged items
+        charDB.flaggedItems = {}
+        
+        -- Reset manually unflagged items
+        charDB.manuallyUnflagged = {}
+    end
     
     -- If auto-flag is enabled, flag all gray items
     if vPeddlerDB.autoFlagGrays then
@@ -369,7 +383,7 @@ function vPeddlerOptions_ResetFilters()
     vPeddler_UpdateBagSlotMarkers()
     
     -- Notify user
-    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: All filters have been reset")
+    DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: All filters have been reset for this character")
 end
 
 -- Slash command handler
@@ -446,9 +460,12 @@ function vPeddler_InitDefaults(force)
         end
     end
     
-    -- Wanted items list and flagged items
+    -- Wanted items list
     vPeddlerDB.wantedItems = vPeddlerDB.wantedItems or {}
-    vPeddlerDB.flaggedItems = vPeddlerDB.flaggedItems or {}
+
+    if vPeddler_GetCharDB then
+        vPeddler_GetCharDB()
+    end
     
     -- Debug mode
     vPeddlerDB.debug = vPeddlerDB.debug or false
@@ -487,17 +504,11 @@ function vPeddler_UpdateHookBasedOnModifier()
             if link then
                 local itemId = vPeddler_GetItemId(link)
                 if itemId then
-                    -- Toggle flagged status
-                    if vPeddlerDB.flaggedItems[itemId] then
+                    if vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId) then
                         vPeddler_UnflagItem(itemId, link)
-                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Removed item from auto-sell list")
                     else
-                        vPeddlerDB.flaggedItems[itemId] = true
-                        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Added item to auto-sell list")
+                        vPeddler_FlagItem(itemId, link)
                     end
-                    
-                    -- Update all instances of this item
-                    vPeddler_UpdateAllInstancesOfItem(itemId)
                     return
                 end
             end

@@ -70,7 +70,7 @@ local function ShouldMarkItem(link)
     if not itemId then return false end
     
     -- Manual flag check - this is the most important part
-    if vPeddlerDB.flaggedItems and vPeddlerDB.flaggedItems[itemId] then
+    if vPeddler_IsItemFlagged and vPeddler_IsItemFlagged(itemId) then
         return true
     end
     
@@ -389,7 +389,18 @@ local function TryInitialize(attempt)
     attempt = attempt or 1
     if attempt > 3 then return end
     
-    Debug("vPeddlerDB.enabled = " .. tostring(vPeddlerDB.enabled) .. ", flaggedItems count = " .. (vPeddlerDB.flaggedItems and table.getn(vPeddlerDB.flaggedItems) or "nil"))
+    local flaggedCount = "nil"
+    if vPeddler_GetCharDB then
+        local charDB = vPeddler_GetCharDB()
+        if charDB and charDB.flaggedItems then
+            local total = 0
+            for _ in pairs(charDB.flaggedItems) do
+                total = total + 1
+            end
+            flaggedCount = total
+        end
+    end
+    Debug("vPeddlerDB.enabled = " .. tostring(vPeddlerDB.enabled) .. ", flaggedItems count = " .. tostring(flaggedCount))
     Debug("Initialization attempt #" .. attempt)
     
     local hookSuccess = HookBagshuiButtonUpdates()
