@@ -890,7 +890,7 @@ function vPeddler_UnflagItem(itemId, link)
     
     -- Only add to manually unflagged if it's a gray item
     if isGray then
-    charDB.manuallyUnflagged[itemId] = true
+        charDB.manuallyUnflagged[itemId] = true
     end
     
     -- Print to chat if verbose mode is enabled
