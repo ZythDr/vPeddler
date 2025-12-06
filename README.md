@@ -1,6 +1,6 @@
 # vPeddler - Peddler for Vanilla WoW 1.12
 
-A relatively sophisticated junk seller addon that focuses on Quality-of-Life features and ease of use.
+A relatively sophisticated junk seller addon that focuses on quality-of-life and user friendliness
 
 ## Usage
 
@@ -67,4 +67,5 @@ Created by Peachoo @ Nordanaar - Turtle WoW
 > Actually made using AI Chatbots, primarily Claude 3.7 through Github Copilot
 
 For issues and feature requests, please open an issue on GitHub and I'll try my best to add/fix things.
+
 
