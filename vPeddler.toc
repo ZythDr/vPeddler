@@ -2,7 +2,7 @@
 ## Title: vPeddler
 ## Notes: Peddler for Vanilla WoW
 ## Author: Peachoo @ Nordanaar - Turtle WoW
-## Version: 1.1
+## Version: 1.2
 ## SavedVariables: vPeddlerDB
 ## SavedVariablesPerCharacter: vPeddlerCharDB
 

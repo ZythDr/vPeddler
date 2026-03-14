@@ -67,6 +67,9 @@ add/remove any item in your inventory to your auto-sell list
 
 ## Changelog
 
+### v1.2
+- **Bugfix (Guda):** Bank slot overlays no longer linger on screen after closing the bank frame. Overlays for bank items are now gated on `Guda_BankFrame` being open
+
 ### v1.1
 - **Guda support:** Added compatibility module for the Guda bag addon (bags + bank). Overlays render above Guda's own border frames and sync instantly across all identical items
 - **Verbose mode refinement:** Auto-flagging gray items is now always silent. Manual flag/unflag still prints to chat when Verbose Mode is enabled

@@ -102,6 +102,29 @@ initFrame:SetScript("OnEvent", function()
         function module:UpdateButton(button)
             if not button then return end
 
+            -- For bank buttons, gate on the bank frame being open.
+            -- Guda's button pool keeps stale hasItem/itemData on hidden bank
+            -- buttons, so checking the frame is more reliable than IsShown().
+            if button.isBank then
+                local bankFrame = _G["Guda_BankFrame"]
+                if not bankFrame or not bankFrame:IsShown() then
+                    if button.vPeddlerOverlay then
+                        ReleaseOverlay(button.vPeddlerOverlay)
+                        button.vPeddlerOverlay = nil
+                    end
+                    return
+                end
+            end
+
+            -- For bag buttons, skip if the button itself isn't visible
+            if not button.isBank and not button:IsShown() then
+                if button.vPeddlerOverlay then
+                    ReleaseOverlay(button.vPeddlerOverlay)
+                    button.vPeddlerOverlay = nil
+                end
+                return
+            end
+
             -- Never show on remote-character or read-only views
             if button.otherChar or button.isReadOnly then
                 if button.vPeddlerOverlay then
