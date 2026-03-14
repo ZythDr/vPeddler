@@ -48,7 +48,7 @@ add/remove any item in your inventory to your auto-sell list
 - [x] pfUI bags  
 - [x] SUCC-bag  
 - [x] Turtle-Dragonflight (bank frames = WIP)
-- [x] Guda
+- [x] Guda (req alt/shift modifier, Ctrl is already used by Guda to toggle item lock)
 
 **Commands**
 
