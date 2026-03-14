@@ -67,6 +67,14 @@ add/remove any item in your inventory to your auto-sell list
 
 ## Changelog
 
+### v1.3
+- **Performance:** Auto-sell queue now advances on `BAG_UPDATE` (event-driven server confirmation) instead of a fixed 200ms timer — selling speed is now bounded by actual server round-trip time rather than an arbitrary delay. A 500ms fallback timer prevents stalls on extreme lag
+- **Performance:** Sell queue now pops from the end (O(1)) instead of the front (O(n) shift)
+- **Performance:** Removed redundant `GetItemInfo` calls in `vPeddler_UpdateSingleSlotMarker` and `vPeddler_SellJunk` where the result was unused
+- **Performance:** `ProcessNewGrayItems` now calls `UpdateAllInstancesOfItem` per newly-flagged item instead of rebuilding all bag markers
+- **Performance:** Sell timer frame is now pooled and reused instead of allocated per item sold
+- **Cleanup:** Removed dead `needsUpdate = true` on `ITEM_LOCK_CHANGED` (visual refresh is already handled by `BAG_UPDATE_DELAYED`)
+
 ### v1.2
 - **Bugfix (Guda):** Bank slot overlays no longer linger on screen after closing the bank frame. Overlays for bank items are now gated on `Guda_BankFrame` being open
 

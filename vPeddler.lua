@@ -231,7 +231,20 @@ function vPeddler_OnEvent()
     elseif event == "BAG_UPDATE" then
         -- Set the needs update flag for visual updates
         vPeddler.needsUpdate = true
-        
+
+        -- Event-driven sell confirmation: if a sale is pending on this bag and
+        -- the slot is now empty, the server has confirmed the transaction.
+        if vPeddler.pendingSale and arg1 == vPeddler.pendingSale.bag then
+            if not GetContainerItemLink(vPeddler.pendingSale.bag, vPeddler.pendingSale.slot) then
+                vPeddler.pendingSale = nil
+                -- Cancel the fallback timer so it doesn't double-fire
+                if vPeddler.sellTimer then
+                    vPeddler.sellTimer:SetScript("OnUpdate", nil)
+                end
+                vPeddler_ProcessSellQueue()
+            end
+        end
+
         -- Check for new gray items immediately when bags change
         if vPeddlerDB and vPeddlerDB.enabled and vPeddlerDB.autoFlagGrays then
             -- A slight delay to ensure the item data is available
@@ -246,8 +259,7 @@ function vPeddler_OnEvent()
             end)
         end
     elseif event == "ITEM_LOCK_CHANGED" then
-        -- Directly handle bag updates without unnecessary function calls
-        vPeddler.needsUpdate = true
+        -- BAG_UPDATE_DELAYED already handles the visual refresh for any real change
     end
 end
 
@@ -282,7 +294,6 @@ function vPeddler_SellJunk()
         for slot = 1, GetContainerNumSlots(bag) do
             local link = GetContainerItemLink(bag, slot)
             if link then
-                local itemName, _, quality = GetItemInfo(link)
                 local itemId = vPeddler_GetItemId(link)
                 
                 -- Check if this item should be sold
@@ -326,22 +337,30 @@ function vPeddler_ProcessSellQueue()
         return
     end
     
-    -- Get the next item from the queue
-    local item = tremove(vPeddler.sellQueue, 1)
+    -- Pop from the end (O(1)) rather than the front (O(n) shift); sell order doesn't matter
+    local item = tremove(vPeddler.sellQueue)
     if item then
         -- Make sure the item still exists at that location
         local link = GetContainerItemLink(item.bag, item.slot)
         if link then
             -- Use UseContainerItem to sell it to the vendor
             UseContainerItem(item.bag, item.slot)
-            
-            -- Continue processing the queue after a small delay
-            local sellTimer = CreateFrame("Frame")
-            sellTimer:SetScript("OnUpdate", function()
-                this.elapsed = (this.elapsed or 0) + arg1
-                if this.elapsed > 0.2 then
-                    vPeddler_ProcessSellQueue()  -- Process next item
+
+            -- Mark which slot we're waiting on; BAG_UPDATE will fire when the
+            -- server confirms the sale (slot becomes empty), letting us proceed
+            -- immediately without a fixed delay.
+            vPeddler.pendingSale = {bag = item.bag, slot = item.slot}
+
+            -- Fallback timer: if BAG_UPDATE never fires (extreme lag / edge case),
+            -- proceed after 0.5s so the queue doesn't stall forever.
+            vPeddler.sellTimer = vPeddler.sellTimer or CreateFrame("Frame")
+            vPeddler.sellTimer.elapsed = 0
+            vPeddler.sellTimer:SetScript("OnUpdate", function()
+                this.elapsed = this.elapsed + arg1
+                if this.elapsed > 0.5 then
                     this:SetScript("OnUpdate", nil)
+                    vPeddler.pendingSale = nil
+                    vPeddler_ProcessSellQueue()  -- Process next item
                 end
             end)
         else
@@ -480,8 +499,7 @@ function vPeddler_UpdateSingleSlotMarker(bag, slot)
         return
     end
     
-    -- Get item info
-    local name, _, quality = GetItemInfo(link)
+    -- itemId is parsed directly from the link; GetItemInfo is not needed here
     local itemId = vPeddler_GetItemId(link)
     if not itemId then return end
     
@@ -993,6 +1011,7 @@ function vPeddler_ProcessNewGrayItems()
     local charDB = vPeddler_GetCharDB()
     
     local flaggedCount = 0
+    local newlyFlagged = {}  -- track itemIds flagged this pass for targeted update
     
     -- Process all items in all bags
     for bag = 0, 4 do
@@ -1014,6 +1033,7 @@ function vPeddler_ProcessNewGrayItems()
                             charDB.flaggedItems[itemId] = true
                             charDB.autoFlaggedItems[itemId] = true
                             flaggedCount = flaggedCount + 1
+                            newlyFlagged[itemId] = true
                         end
                     end
                 end
@@ -1021,11 +1041,11 @@ function vPeddler_ProcessNewGrayItems()
         end
     end
     
-    -- If we flagged any items, update the bag markers
+    -- If we flagged any items, update only the affected item markers
     if flaggedCount > 0 then
-        vPeddler_UpdateBagSlotMarkers()
-        
-        -- Auto-flag batch count is always silent
+        for itemId in pairs(newlyFlagged) do
+            vPeddler_UpdateAllInstancesOfItem(itemId)
+        end
     end
     
     return flaggedCount
