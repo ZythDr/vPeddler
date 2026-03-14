@@ -304,9 +304,7 @@ function vPeddler_SellJunk()
     
     -- Start the selling process if there are items to sell
     if vPeddler.queueSize > 0 then
-        if vPeddlerDB.verboseMode then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Selling " .. itemCount .. " items...")
-        end
+        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Selling " .. itemCount .. " items...")
         vPeddler_ProcessSellQueue()
     end
 end
@@ -320,7 +318,7 @@ function vPeddler_ProcessSellQueue()
         -- Calculate how much we made if we sold anything
         if vPeddler.startMoney then
             local profit = GetMoney() - vPeddler.startMoney
-            if profit > 0 and vPeddlerDB.verboseMode then
+            if profit > 0 then
                 DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Earned " .. vPeddler_GetCoinTextureString(profit) .. " from selling junk")
             end
             vPeddler.startMoney = nil
@@ -627,12 +625,8 @@ function vPeddler_Initialize()
         vPeddler_UpdateBagMarkers(bag)
     end
 
-    -- Run auto-flag for gray items if enabled
+    -- Run auto-flag for gray items if enabled (silent)
     if vPeddlerDB and vPeddlerDB.autoFlagGrays then
-        -- Add a debug message
-        if vPeddlerDB.verboseMode then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Running initial auto-flag for gray items...")
-        end
         vPeddler_AutoFlagGrayItems()
     end
 end
@@ -841,14 +835,7 @@ function vPeddler_AutoFlagGrayItems(forceFlag)
     -- Update the markers
     vPeddler_UpdateBagSlotMarkers()
     
-    -- Message handling (existing code)
-    if vPeddlerDB.verboseMode then
-        if grayCount > 0 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Found " .. grayCount .. " gray items, auto-flagged " .. flaggedCount .. " for selling")
-        else
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: No gray items found in bags")
-        end
-    end
+    -- Auto-flag messages are always silent
     
     return flaggedCount
 end
@@ -994,9 +981,7 @@ function vPeddler_AutoFlagGrayItems()
     vPeddler_UpdateBagSlotMarkers()
     
     -- Only notify if verbose mode is on
-    if flaggedCount > 0 and vPeddlerDB.verboseMode then
-        DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flagged " .. flaggedCount .. " gray items")
-    end
+    -- Auto-flag messages are always silent
     
     return flaggedCount
 end
@@ -1025,15 +1010,10 @@ function vPeddler_ProcessNewGrayItems()
                         local isManuallyUnflagged = charDB.manuallyUnflagged[itemId]
                         
                         if not isManuallyUnflagged and not charDB.flaggedItems[itemId] then
-                            -- Auto-flag this item
+                            -- Auto-flag this item (silent)
                             charDB.flaggedItems[itemId] = true
                             charDB.autoFlaggedItems[itemId] = true
                             flaggedCount = flaggedCount + 1
-                            
-                            -- Debug output in verbose mode
-                            if vPeddlerDB.verboseMode then
-                                DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flagged new item: " .. link)
-                            end
                         end
                     end
                 end
@@ -1045,10 +1025,7 @@ function vPeddler_ProcessNewGrayItems()
     if flaggedCount > 0 then
         vPeddler_UpdateBagSlotMarkers()
         
-        -- Only notify if in verbose mode and we found items
-        if vPeddlerDB.verboseMode then
-            DEFAULT_CHAT_FRAME:AddMessage("|cFF99CC33vPeddler|r: Auto-flagged " .. flaggedCount .. " new gray items")
-        end
+        -- Auto-flag batch count is always silent
     end
     
     return flaggedCount

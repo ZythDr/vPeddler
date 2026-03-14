@@ -48,6 +48,7 @@ add/remove any item in your inventory to your auto-sell list
 - [x] pfUI bags  
 - [x] SUCC-bag  
 - [x] Turtle-Dragonflight (bank frames = WIP)
+- [x] Guda
 
 **Commands**
 
@@ -61,6 +62,18 @@ add/remove any item in your inventory to your auto-sell list
 - [ ] Add support for items that cannot be sold to vendors (Delete unwanted items at vendor)
 - [ ] Implement a manual sell button for paranoid players
 - [ ] Create a separate plugin to add remaining features found in the original Peddler addon
+
+---
+
+## Changelog
+
+### v1.1
+- **Guda support:** Added compatibility module for the Guda bag addon (bags + bank). Overlays render above Guda's own border frames and sync instantly across all identical items
+- **Verbose mode refinement:** Auto-flagging gray items is now always silent. Manual flag/unflag still prints to chat when Verbose Mode is enabled
+- **Always-on vendor summary:** "Selling X items…" and the profit earned message now always print when visiting vendors, regardless of Verbose Mode
+
+### v1.0
+- Initial release
 
 ---
 Created by Peachoo @ Nordanaar - Turtle WoW 
