@@ -76,7 +76,7 @@ add/remove any item in your inventory to your auto-sell list
 - Initial release
 
 ---
-Created by Peachoo @ Nordanaar - Turtle WoW 
+Created by Peachoo/Ieaiaio/Entertragedy/Shadorei @ Nordanaar - Turtle WoW 
 > Actually made using AI Chatbots, primarily Claude 3.7 through Github Copilot
 
 For issues and feature requests, please open an issue on GitHub and I'll try my best to add/fix things.
